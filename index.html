@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitoring Delivery On Time — Logistik Transport PT. UNIFAM</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root{
+    --navy:#0d2438;
+    --navy2:#15324d;
+    --steel:#3d6a8a;
+    --mist:#e8eef2;
+    --paper:#f6f3ec;
+    --orange:#e0732a;
+    --green:#3f8f5b;
+    --red:#c1452f;
+    --amber:#d8a32b;
+    --line:#d6dde2;
+    --text:#1b2a35;
+    --muted:#6b7e8c;
+    font-family: 'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--text);
+    font-family:'IBM Plex Sans',Arial,sans-serif;
+  }
+  @font-face{
+    font-family:'IBM Plex Sans';
+    src:local('Arial');
+  }
+  .topbar{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);
+    color:#fff;
+    padding:22px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    border-bottom:4px solid var(--orange);
+  }
+  .topbar h1{
+    margin:0;
+    font-size:1.4rem;
+    font-weight:700;
+    letter-spacing:.5px;
+  }
+  .topbar .sub{
+    font-size:.78rem;
+    color:#aebfcd;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    margin-top:4px;
+  }
+  .container-icon{
+    font-family:monospace;
+    font-size:1.6rem;
+    background:var(--orange);
+    color:#fff;
+    width:42px;height:42px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:6px;
+    box-shadow:inset 0 -3px 0 rgba(0,0,0,.2);
+  }
+  .brand{display:flex;align-items:center;gap:14px;}
+
+  .sourcebar{
+    background:#fff;
+    border-bottom:1px solid var(--line);
+    padding:14px 28px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .sourcebar input[type=text]{
+    flex:1;
+    min-width:240px;
+    padding:9px 12px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:.85rem;
+    background:var(--mist);
+  }
+  .sourcebar button{
+    background:var(--navy);
+    color:#fff;
+    border:none;
+    padding:10px 18px;
+    border-radius:6px;
+    font-weight:600;
+    font-size:.85rem;
+    cursor:pointer;
+    letter-spacing:.5px;
+  }
+  .sourcebar button:hover{background:var(--navy2);}
+  .sourcebar .status{
+    font-size:.78rem;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .sourcebar a.howto{
+    font-size:.78rem;
+    color:var(--steel);
+    text-decoration:underline;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+
+  main{padding:24px 28px 60px;}
+
+  .kpi-row{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:14px;
+    margin-bottom:22px;
+  }
+  .kpi{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:16px 18px;
+    position:relative;
+    overflow:hidden;
+  }
+  .kpi::before{
+    content:'';
+    position:absolute;left:0;top:0;bottom:0;width:5px;
+    background:var(--steel);
+  }
+  .kpi.green::before{background:var(--green);}
+  .kpi.red::before{background:var(--red);}
+  .kpi.amber::before{background:var(--amber);}
+  .kpi.orange::before{background:var(--orange);}
+  .kpi .label{
+    font-size:.72rem;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:1px;
+    margin-bottom:6px;
+  }
+  .kpi .value{
+    font-size:1.9rem;
+    font-weight:700;
+    color:var(--navy);
+    line-height:1;
+  }
+  .kpi .sub{font-size:.75rem;color:var(--muted);margin-top:4px;}
+
+  .grid2{
+    display:grid;
+    grid-template-columns:1.3fr 1fr;
+    gap:18px;
+    margin-bottom:22px;
+  }
+  @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
+
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:18px;
+  }
+  .card h2{
+    margin:0 0 14px;
+    font-size:.95rem;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--navy);
+    border-bottom:2px solid var(--orange);
+    display:inline-block;
+    padding-bottom:4px;
+  }
+  .chart-wrap{position:relative;height:280px;}
+
+  .filters{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+  .filters select, .filters input{
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:.82rem;
+    background:var(--mist);
+    color:var(--text);
+  }
+  .filters input{flex:1;min-width:180px;}
+
+  .pill-group{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:10px;
+  }
+  .pill-group .pill-label{
+    font-size:.72rem;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:1px;
+    width:100%;
+    margin-bottom:2px;
+  }
+  .pill{
+    padding:5px 12px;
+    border:1px solid var(--line);
+    border-radius:20px;
+    font-size:.78rem;
+    background:#fff;
+    color:var(--text);
+    cursor:pointer;
+    transition:all .15s;
+    white-space:nowrap;
+  }
+  .pill:hover{border-color:var(--steel);}
+  .pill.active{
+    background:var(--navy);
+    color:#fff;
+    border-color:var(--navy);
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:.8rem;
+  }
+  thead th{
+    background:var(--navy);
+    color:#fff;
+    text-align:left;
+    padding:9px 10px;
+    position:sticky;top:0;
+    white-space:nowrap;
+    font-weight:600;
+    letter-spacing:.3px;
+  }
+  tbody td{
+    padding:8px 10px;
+    border-bottom:1px solid var(--line);
+    white-space:nowrap;
+  }
+  tbody tr:hover{background:var(--mist);}
+  .table-scroll{
+    max-height:520px;
+    overflow:auto;
+    border:1px solid var(--line);
+    border-radius:6px;
+  }
+  .badge{
+    display:inline-block;
+    padding:3px 9px;
+    border-radius:20px;
+    font-size:.7rem;
+    font-weight:700;
+    letter-spacing:.5px;
+  }
+  .badge.hit{background:#e3f2e8;color:var(--green);}
+  .badge.miss{background:#fbe7e3;color:var(--red);}
+  .badge.pending{background:#fdf3df;color:var(--amber);}
+  .badge.unknown{background:var(--mist);color:var(--muted);}
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--muted);
+  }
+  .empty-state .big{font-size:2.2rem;margin-bottom:10px;}
+  .empty-state code{
+    background:var(--mist);
+    padding:2px 6px;
+    border-radius:4px;
+  }
+  .hidden{display:none !important;}
+
+  .howto-panel{
+    background:#fff;
+    border:1px solid var(--line);
+    border-left:4px solid var(--orange);
+    border-radius:8px;
+    padding:18px 20px;
+    margin-bottom:22px;
+    font-size:.85rem;
+    line-height:1.6;
+  }
+  .howto-panel ol{margin:8px 0 0 18px;padding:0;}
+  .howto-panel li{margin-bottom:4px;}
+  .howto-panel strong{color:var(--navy);}
+
+  footer{
+    text-align:center;
+    padding:18px;
+    font-size:.75rem;
+    color:var(--muted);
+    border-top:1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="container-icon">▭</div>
+    <div>
+      <h1>Monitoring Delivery On Time</h1>
+      <div class="sub">PT. UNIFAM — Logistik & Transport · ETD · ETA · ATA</div>
+    </div>
+  </div>
+  <div class="status" id="lastSync">Belum tersambung ke Google Sheets</div>
+</div>
+
+<div class="sourcebar">
+  <input type="text" id="sheetUrl" placeholder="Tempel link CSV publish dari Google Sheets di sini..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSr5a-IuvbhOjfsbATYVtgSyQ5YVRGYK2nYgNC7yxhQwHnnsUbndjYVZ0HsQ00qcu8K-HEVVq_SLAyh/pub?gid=934115720&single=true&output=csv">
+  <input type="text" id="skipRows" placeholder="Skip baris" value="7" style="max-width:90px;flex:none;">
+  <button onclick="loadData()">Sambungkan & Muat Data</button>
+  <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap;">
+    <input type="checkbox" id="autoRefreshChk" checked> Auto-refresh
+  </label>
+  <select id="autoRefreshInterval" style="max-width:110px;">
+    <option value="60000">1 menit</option>
+    <option value="300000" selected>5 menit</option>
+    <option value="600000">10 menit</option>
+    <option value="1800000">30 menit</option>
+  </select>
+  <a class="howto" onclick="document.getElementById('howto').classList.toggle('hidden')">Cara dapat link CSV?</a>
+</div>
+
+<main>
+
+  <div class="howto-panel" id="howto">
+    <strong>Cara publish Google Sheets sebagai CSV:</strong>
+    <ol>
+      <li>Buka Google Sheets &rarr; <strong>File &rarr; Share &rarr; Publish to web</strong></li>
+      <li>Pilih sheet/tab yang berisi data report DOT</li>
+      <li>Pada pilihan format, pilih <strong>Comma-separated values (.csv)</strong></li>
+      <li>Klik <strong>Publish</strong>, lalu copy link yang muncul</li>
+      <li>Tempel link tersebut di kotak di atas, lalu klik <strong>Sambungkan & Muat Data</strong></li>
+    </ol>
+    <p style="margin-top:10px;color:var(--muted)">Catatan: setiap kali sheet diubah dan disimpan, data publish biasanya update otomatis dalam beberapa menit. Tinggal klik "Muat Data" lagi untuk refresh.</p>
+  </div>
+
+  <div id="emptyState" class="empty-state">
+    <div class="big">▭ ▭ ▭</div>
+    <div>Belum ada data. Tempel link CSV publish dari Google Sheets di atas untuk mulai monitoring.</div>
+    <div style="margin-top:10px;font-size:.75rem">Kolom yang dibaca: <code>showETA</code>, <code>Receipt ETA</code>, <code>Arrival Date</code>, <code>Ship date</code>, <code>HIT/MISS</code>, <code>Expedition Id</code>, <code>Region</code>, dll.</div>
+  </div>
+
+  <div id="dashboard" class="hidden">
+
+    <div class="card" style="margin-bottom:18px;">
+      <h2>Filter Data</h2>
+
+      <div class="pill-group" id="pillBulan">
+        <div class="pill-label">Bulan</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+      <div class="pill-group" id="pillExpedisi">
+        <div class="pill-label">Ekspedisi</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+      <div class="pill-group" id="pillWeek">
+        <div class="pill-label">Week</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+
+      <div class="filters" style="margin-bottom:0;">
+        <input type="text" id="searchBox" placeholder="Cari: container, nopol, packing slip, delivery name...">
+        <select id="filterStatus">
+          <option value="">Semua Status</option>
+          <option value="hit">HIT (On Time)</option>
+          <option value="miss">MISS (Delay)</option>
+          <option value="pending">Belum Tiba</option>
+        </select>
+        <select id="filterExpedition"><option value="">Semua Ekspedisi</option></select>
+        <select id="filterRegion"><option value="">Semua Region</option></select>
+        <select id="filterBulanMain"><option value="">Semua Bulan</option></select>
+        <select id="filterIssue"><option value="">Semua Issue</option></select>
+        <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">ETA dari
+          <input type="date" id="filterEtaFrom">
+        </label>
+        <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">s.d.
+          <input type="date" id="filterEtaTo">
+        </label>
+      </div>
+    </div>
+
+
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="label">Total Pengiriman</div>
+        <div class="value" id="kpiTotal">0</div>
+        <div class="sub" id="kpiBulan">-</div>
+      </div>
+      <div class="kpi orange">
+        <div class="label">Belum Tiba (ATA Kosong)</div>
+        <div class="value" id="kpiPending">0</div>
+        <div class="sub">Container Num & Arrival Date</div>
+      </div>
+      <div class="kpi green">
+        <div class="label">% HIT (On Time)</div>
+        <div class="value" id="kpiHitPctBig">0%</div>
+        <div class="sub" id="kpiHitSub">0 dari 0 yang sudah tiba</div>
+      </div>
+      <div class="kpi green">
+        <div class="label">On Time (HIT)</div>
+        <div class="value" id="kpiHit">0</div>
+        <div class="sub" id="kpiHitPct">0% dari yang sudah tiba</div>
+      </div>
+      <div class="kpi red">
+        <div class="label">Delay (MISS)</div>
+        <div class="value" id="kpiMiss">0</div>
+        <div class="sub" id="kpiMissPct">0% dari yang sudah tiba</div>
+      </div>
+      <div class="kpi amber">
+        <div class="label">Rata-rata Lead Time</div>
+        <div class="value" id="kpiLead">-</div>
+        <div class="sub">hari (Ship date &rarr; Arrival Date)</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Performa per Ekspedisi (HIT vs MISS)</h2>
+        <div class="chart-wrap"><canvas id="chartExpedition"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Proporsi Status</h2>
+        <div class="chart-wrap"><canvas id="chartStatus"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Rata-rata Selisih ETA vs ATA per Region</h2>
+        <div class="chart-wrap"><canvas id="chartRegion"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Tren Pengiriman per Bulan</h2>
+        <div class="chart-wrap"><canvas id="chartBulan"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Jenis Issue per Ekspedisi</h2>
+        <div class="chart-wrap"><canvas id="chartIssueExped"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Distribusi Jenis Issue</h2>
+        <div class="chart-wrap"><canvas id="chartIssue"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Ringkasan per Kategori</h2>
+      <div class="filters">
+        <select id="groupBySelect">
+          <option value="WEEK">By Week</option>
+          <option value="Region">By Region</option>
+          <option value="Expedition Id">By Ekspedisi</option>
+          <option value="OM">By OM</option>
+          <option value="_pulau">By Pulau</option>
+        </select>
+      </div>
+      <div class="chart-wrap" style="height:300px;margin-bottom:18px;"><canvas id="chartGroupBy"></canvas></div>
+      <div class="table-scroll" style="max-height:360px;">
+        <table>
+          <thead>
+            <tr>
+              <th id="groupByColHead">Kategori</th>
+              <th>Total</th>
+              <th>HIT</th>
+              <th>MISS</th>
+              <th>Belum Tiba</th>
+              <th>% HIT</th>
+              <th>Rata² Lead Time</th>
+              <th>Rata² Selisih ETA-ATA</th>
+            </tr>
+          </thead>
+          <tbody id="groupByBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tabel Monitoring Kontainer</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Kota</th>
+              <th>Bulan</th>
+              <th>Container Num</th>
+              <th>Nopol</th>
+              <th>Ekspedisi</th>
+              <th>Vehicle Type</th>
+              <th>Ship Date</th>
+              <th>ETA (show)</th>
+              <th>Receipt ETA</th>
+              <th>Arrival Date</th>
+              <th>Receipt Date</th>
+              <th>Selisih (hari)</th>
+              <th>Lead Time</th>
+              <th>Status</th>
+              <th>Region</th>
+              <th>Keterangan</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card" style="margin-top:22px;">
+    <h2>Monitoring ETA Kontainer (Sheet Terpisah)</h2>
+    <div class="sourcebar" style="padding:0;border:none;margin-bottom:14px;">
+      <input type="text" id="sheetUrl2" placeholder="Tempel link CSV publish 'Monitoring ETA Kontainer'..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSr5a-IuvbhOjfsbATYVtgSyQ5YVRGYK2nYgNC7yxhQwHnnsUbndjYVZ0HsQ00qcu8K-HEVVq_SLAyh/pub?gid=1331290254&single=true&output=csv">
+      <input type="text" id="skipRows2" placeholder="Skip baris" value="0" style="max-width:90px;flex:none;">
+      <button onclick="loadData2()">Muat Data</button>
+      <span class="status" id="lastSync2">Belum dimuat</span>
+    </div>
+    <div class="filters" id="eta2Filters" style="display:none;">
+      <select id="filterEta2Col"></select>
+      <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">dari
+        <input type="date" id="filterEta2From">
+      </label>
+      <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">s.d.
+        <input type="date" id="filterEta2To">
+      </label>
+    </div>
+    <div class="table-scroll" id="eta2TableWrap" style="display:none;">
+      <table>
+        <thead><tr id="eta2Head"></tr></thead>
+        <tbody id="eta2Body"></tbody>
+      </table>
+    </div>
+  </div>
+
+
+</main>
+
+<footer>Monitoring Delivery On Time — PT. UNIFAM · sinkron langsung dari Google Sheets (CSV publish). Data tidak disimpan di server.</footer>
+
+<script>
+let rawData = [];
+let charts = {};
+if(window.ChartDataLabels) Chart.register(ChartDataLabels);
+
+function parseDate(str){
+  if(!str) return null;
+  str = String(str).trim();
+  if(!str) return null;
+  // try common formats
+  let d = new Date(str);
+  if(!isNaN(d.getTime())) return d;
+  // try DD/MM/YYYY
+  let parts = str.split(/[\/\-]/);
+  if(parts.length===3){
+    let [a,b,c] = parts;
+    if(c.length===4){ // dd/mm/yyyy
+      d = new Date(`${c}-${b.padStart(2,'0')}-${a.padStart(2,'0')}`);
+      if(!isNaN(d.getTime())) return d;
+    }
+  }
+  return null;
+}
+
+function diffDays(d1, d2){
+  if(!d1 || !d2) return null;
+  return Math.round((d2 - d1) / (1000*60*60*24));
+}
+
+function fmtDate(d){
+  if(!d) return '-';
+  return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function getStatus(row){
+  let hitmiss = (row['HIT/MISSS'] || row['HIT/MISS'] || '').toString().trim().toUpperCase();
+  if(hitmiss.includes('HIT')) return 'hit';
+  if(hitmiss.includes('MISS')) return 'miss';
+  if(!row._arrival) return 'pending';
+  return 'unknown';
+}
+
+let autoRefreshTimer = null;
+
+document.getElementById('autoRefreshChk').addEventListener('change', e=>{
+  if(e.target.checked){
+    if(!document.getElementById('sheetUrl').value.trim()){
+      alert('Masukkan link CSV dan muat data dulu sebelum mengaktifkan auto-refresh.');
+      e.target.checked = false;
+      return;
+    }
+    startAutoRefresh();
+  } else {
+    stopAutoRefresh();
+  }
+});
+document.getElementById('autoRefreshInterval').addEventListener('change', ()=>{
+  if(document.getElementById('autoRefreshChk').checked) startAutoRefresh();
+});
+
+function startAutoRefresh(){
+  stopAutoRefresh();
+  const interval = parseInt(document.getElementById('autoRefreshInterval').value);
+  autoRefreshTimer = setInterval(()=>{ loadData(); }, interval);
+}
+function stopAutoRefresh(){
+  if(autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+}
+
+function loadData(){
+  let url = document.getElementById('sheetUrl').value.trim();
+  if(!url){ alert('Masukkan link CSV publish dari Google Sheets dulu ya.'); return; }
+  document.getElementById('lastSync').textContent = 'Memuat data...';
+
+  const cacheBust = (url.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+  const directUrl = url + cacheBust;
+
+  const attempts = [
+    { name:'langsung', url: directUrl },
+    { name:'allorigins', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl) },
+    { name:'corsproxy', url: 'https://corsproxy.io/?url=' + encodeURIComponent(directUrl) },
+    { name:'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' + directUrl },
+    { name:'jina-reader', url: 'https://r.jina.ai/' + directUrl }
+  ];
+
+  fetchSequential(attempts, 0);
+}
+
+function fetchSequential(attempts, idx){
+  if(idx >= attempts.length){
+    document.getElementById('lastSync').textContent = 'Gagal memuat semua metode. Cek link CSV publish-nya (lihat petunjuk di bawah).';
+    return;
+  }
+  const attempt = attempts[idx];
+  document.getElementById('lastSync').textContent = 'Memuat data... (' + attempt.name + ')';
+
+  fetch(attempt.url)
+    .then(res => {
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(text => {
+      const t = text.trim();
+      const looksHtml = /^<!doctype html/i.test(t) || /^<html/i.test(t);
+      if(!t || t.length < 5 || looksHtml){
+        throw new Error('Respons bukan CSV (kemungkinan HTML/error page)');
+      }
+      processCsvText(text);
+    })
+    .catch(err => {
+      console.warn('Gagal via ' + attempt.name + ':', err.message);
+      fetchSequential(attempts, idx + 1);
+    });
+}
+
+function processCsvText(text){
+  // Bersihkan kemungkinan wrapping dari proxy (markdown code fence / jina-reader header)
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^```[a-z]*\n?/i, '').replace(/```$/,'').trim();
+  const mdMarker = cleaned.indexOf('Markdown Content:');
+  if(mdMarker !== -1){
+    cleaned = cleaned.substring(mdMarker + 'Markdown Content:'.length).trim();
+  }
+
+  // Skip N baris pertama (judul/pivot di atas header asli)
+  const skipN = parseInt(document.getElementById('skipRows').value) || 0;
+  if(skipN > 0){
+    const lines = cleaned.split('\n');
+    cleaned = lines.slice(skipN).join('\n');
+  }
+
+  const results = Papa.parse(cleaned, {
+    header: true,
+    skipEmptyLines: true,
+    delimiter: ',',
+    transformHeader: h => h.trim()
+  });
+  console.log('Jumlah kolom:', results.meta && results.meta.fields && results.meta.fields.length);
+  console.log('Headers terbaca:', results.meta && results.meta.fields);
+  console.log('Contoh baris pertama:', JSON.stringify(results.data[0]));
+  console.log('Cuplikan teks mentah (200 char):', cleaned.substring(0,200));
+  if(!results.data || results.data.length === 0){
+    document.getElementById('lastSync').textContent = 'Data kosong / format tidak sesuai';
+    return;
+  }
+  rawData = results.data.map(row => {
+    row._ship = parseDate(row['Ship date']);
+    row._eta = parseDate(row['showETA']);
+    row._receiptEta = parseDate(row['Receipt ETA']);
+    row._arrival = parseDate(row['Arrival Date']);
+    row._receiptDate = parseDate(row['Receipt Date']);
+    row._diff = diffDays(row._eta || row._receiptEta, row._arrival);
+    row._status = getStatus(row);
+    return row;
+  }).filter(r => Object.values(r).some(v => v && String(v).trim() !== ''));
+
+  if(rawData.length === 0){
+    document.getElementById('lastSync').textContent = 'Data kosong / link tidak valid';
+    return;
+  }
+
+  document.getElementById('lastSync').textContent =
+    'Tersambung — ' + rawData.length + ' baris · update ' + new Date().toLocaleTimeString('id-ID') +
+    (document.getElementById('autoRefreshChk').checked ? ' · auto-refresh aktif' : '');
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('dashboard').classList.remove('hidden');
+
+  populateFilters();
+  renderAll();
+}
+
+function populateFilters(){
+  const exped = new Set(), region = new Set(), bulan = new Set(), issue = new Set(), week = new Set();
+  rawData.forEach(r=>{
+    if(r['Expedition Id']) exped.add(r['Expedition Id'].trim());
+    if(r['Region']) region.add(r['Region'].trim());
+    if(r['BULAN']) bulan.add(r['BULAN'].trim());
+    const iss = (r['ISSUE']||'').trim();
+    if(iss) issue.add(iss);
+    const w = (r['WEEK']||'').toString().trim();
+    if(w) week.add(w);
+  });
+  fillSelect('filterExpedition', exped);
+  fillSelect('filterRegion', region);
+  fillSelect('filterBulanMain', bulan);
+  fillSelect('filterIssue', issue);
+
+  fillPills('pillBulan', [...bulan].sort());
+  fillPills('pillExpedisi', [...exped].sort());
+  fillPills('pillWeek', [...week].sort((a,b)=>(parseFloat(a)||0)-(parseFloat(b)||0)));
+}
+
+function fillPills(containerId, values){
+  const container = document.getElementById(containerId);
+  const label = container.querySelector('.pill-label');
+  container.innerHTML = '';
+  container.appendChild(label);
+
+  const allPill = document.createElement('div');
+  allPill.className = 'pill active';
+  allPill.dataset.value = '';
+  allPill.textContent = 'Semua';
+  container.appendChild(allPill);
+
+  values.forEach(v=>{
+    const pill = document.createElement('div');
+    pill.className = 'pill';
+    pill.dataset.value = v;
+    pill.textContent = v;
+    container.appendChild(pill);
+  });
+
+  container.querySelectorAll('.pill').forEach(pill=>{
+    pill.addEventListener('click', ()=>{
+      container.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+      pill.classList.add('active');
+      if(rawData.length) renderAll();
+    });
+  });
+}
+
+function getPillValue(containerId){
+  const active = document.querySelector('#'+containerId+' .pill.active');
+  return active ? active.dataset.value : '';
+}
+
+function fillSelect(id, set){
+  const sel = document.getElementById(id);
+  const current = sel.value;
+  sel.innerHTML = sel.options[0].outerHTML;
+  [...set].sort().forEach(v=>{
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  });
+  sel.value = current;
+}
+
+function getFiltered(){
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  const status = document.getElementById('filterStatus').value;
+  const exped = document.getElementById('filterExpedition').value;
+  const region = document.getElementById('filterRegion').value;
+  const bulan = getPillValue('pillBulan') || document.getElementById('filterBulanMain').value;
+  const issue = document.getElementById('filterIssue').value;
+  const expedPill = getPillValue('pillExpedisi');
+  const weekPill = getPillValue('pillWeek');
+  const etaFrom = document.getElementById('filterEtaFrom').value;
+  const etaTo = document.getElementById('filterEtaTo').value;
+
+  return rawData.filter(r=>{
+    if(status && r._status !== status) return false;
+    if(exped && (r['Expedition Id']||'').trim() !== exped) return false;
+    if(expedPill && (r['Expedition Id']||'').trim() !== expedPill) return false;
+    if(weekPill && (r['WEEK']||'').toString().trim() !== weekPill) return false;
+    if(region && (r['Region']||'').trim() !== region) return false;
+    if(bulan && (r['BULAN']||'').trim() !== bulan) return false;
+    if(issue && (r['ISSUE']||'').trim() !== issue) return false;
+    if(etaFrom){
+      if(!r._eta) return false;
+      if(r._eta < new Date(etaFrom)) return false;
+    }
+    if(etaTo){
+      if(!r._eta) return false;
+      const to = new Date(etaTo); to.setHours(23,59,59,999);
+      if(r._eta > to) return false;
+    }
+    if(search){
+      const hay = [r['Container Num'],r['Nopol'],r['Packing slip'],r['Delivery name'],r['Order account']]
+        .join(' ').toLowerCase();
+      if(!hay.includes(search)) return false;
+    }
+    return true;
+  });
+}
+
+function renderAll(){
+  const data = getFiltered();
+  renderKPI(data);
+  renderTable(data);
+  renderCharts(data);
+  renderGroupBy(data);
+}
+
+const PULAU_MAP = {
+  // Sumatera
+  'medan':'Sumatera','aceh':'Sumatera','padang':'Sumatera','pekanbaru':'Sumatera','jambi':'Sumatera',
+  'palembang':'Sumatera','bengkulu':'Sumatera','lampung':'Sumatera','batam':'Sumatera','riau':'Sumatera',
+  'dumai':'Sumatera','jambi':'Sumatera','bandar lampung':'Sumatera','tanjung pinang':'Sumatera',
+  // Jawa
+  'jakarta':'Jawa','bandung':'Jawa','semarang':'Jawa','surabaya':'Jawa','yogyakarta':'Jawa',
+  'cikande':'Jawa','tangerang':'Jawa','bekasi':'Jawa','bogor':'Jawa','cirebon':'Jawa','malang':'Jawa',
+  'solo':'Jawa','kediri':'Jawa','jember':'Jawa','tegal':'Jawa','serang':'Jawa',
+  // Kalimantan
+  'pontianak':'Kalimantan','banjarmasin':'Kalimantan','samarinda':'Kalimantan','balikpapan':'Kalimantan',
+  'palangkaraya':'Kalimantan','tarakan':'Kalimantan','sampit':'Kalimantan','ketapang':'Kalimantan',
+  // Sulawesi
+  'makassar':'Sulawesi','manado':'Sulawesi','palu':'Sulawesi','kendari':'Sulawesi','gorontalo':'Sulawesi',
+  'poso':'Sulawesi','bitung':'Sulawesi','pare-pare':'Sulawesi','luwuk':'Sulawesi',
+  // Bali & Nusa Tenggara
+  'denpasar':'Bali & Nusra','bali':'Bali & Nusra','mataram':'Bali & Nusra','kupang':'Bali & Nusra',
+  'lombok':'Bali & Nusra','sumbawa':'Bali & Nusra','flores':'Bali & Nusra',
+  // Maluku & Papua
+  'ambon':'Maluku & Papua','jayapura':'Maluku & Papua','sorong':'Maluku & Papua','ternate':'Maluku & Papua',
+  'manokwari':'Maluku & Papua','merauke':'Maluku & Papua','timika':'Maluku & Papua','fak-fak':'Maluku & Papua'
+};
+
+function getPulau(kota){
+  if(!kota) return 'Tidak diketahui';
+  const k = kota.toString().trim().toLowerCase();
+  for(const key in PULAU_MAP){
+    if(k.includes(key)) return PULAU_MAP[key];
+  }
+  return 'Lainnya';
+}
+
+function renderGroupBy(data){
+  const field = document.getElementById('groupBySelect').value;
+  const colHead = document.getElementById('groupByColHead');
+  const labelMap = {WEEK:'Week', Region:'Region', 'Expedition Id':'Ekspedisi', OM:'OM', _pulau:'Pulau'};
+  colHead.textContent = labelMap[field] || 'Kategori';
+
+  const groups = {};
+  data.forEach(r=>{
+    let key;
+    if(field === '_pulau') key = getPulau(r['Kota']);
+    else key = (r[field] || 'Tidak diketahui').toString().trim() || 'Tidak diketahui';
+
+    if(!groups[key]) groups[key] = { total:0, hit:0, miss:0, pending:0, leads:[], diffs:[] };
+    const g = groups[key];
+    g.total++;
+    if(r._status==='hit') g.hit++;
+    else if(r._status==='miss') g.miss++;
+    else if(r._status==='pending') g.pending++;
+
+    const lt = r['Lead time'];
+    if(lt && !isNaN(parseFloat(lt))) g.leads.push(parseFloat(lt));
+    else { const d = diffDays(r._ship, r._arrival); if(d!==null) g.leads.push(d); }
+
+    if(r._diff !== null) g.diffs.push(r._diff);
+  });
+
+  let keys = Object.keys(groups);
+  if(field === 'WEEK'){
+    keys.sort((a,b)=> (parseFloat(a)||0) - (parseFloat(b)||0));
+  } else {
+    keys.sort((a,b)=> groups[b].total - groups[a].total);
+  }
+
+  const tbody = document.getElementById('groupByBody');
+  if(keys.length === 0){
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Tidak ada data</td></tr>';
+  } else {
+    tbody.innerHTML = keys.map(k=>{
+      const g = groups[k];
+      const arrived = g.hit + g.miss;
+      const pctHit = arrived ? Math.round(g.hit/arrived*100) : 0;
+      const avgLead = g.leads.length ? (g.leads.reduce((a,b)=>a+b,0)/g.leads.length).toFixed(1) : '-';
+      const avgDiff = g.diffs.length ? (g.diffs.reduce((a,b)=>a+b,0)/g.diffs.length).toFixed(1) : '-';
+      return `<tr>
+        <td><strong>${k}</strong></td>
+        <td>${g.total}</td>
+        <td><span class="badge hit">${g.hit}</span></td>
+        <td><span class="badge miss">${g.miss}</span></td>
+        <td><span class="badge pending">${g.pending}</span></td>
+        <td>${pctHit}%</td>
+        <td>${avgLead}</td>
+        <td>${avgDiff}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  destroyChart('groupBy');
+  charts.groupBy = new Chart(document.getElementById('chartGroupBy'), {
+    type:'bar',
+    data:{
+      labels: keys,
+      datasets:[
+        {label:'HIT', data: keys.map(k=>groups[k].hit), backgroundColor:'#3f8f5b'},
+        {label:'MISS', data: keys.map(k=>groups[k].miss), backgroundColor:'#c1452f'},
+        {label:'Belum Tiba', data: keys.map(k=>groups[k].pending), backgroundColor:'#d8a32b'}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+      plugins:{
+        legend:{position:'bottom'},
+        datalabels:{
+          color:'#fff', font:{weight:'bold', size:9},
+          formatter:(value)=> value ? value : ''
+        }
+      }
+    }
+  });
+}
+
+document.getElementById('groupBySelect').addEventListener('change', ()=>{ if(rawData.length) renderGroupBy(getFiltered()); });
+
+function renderKPI(data){
+  const total = data.length;
+  const pending = data.filter(r=>r._status==='pending').length;
+  const hit = data.filter(r=>r._status==='hit').length;
+  const miss = data.filter(r=>r._status==='miss').length;
+  const arrived = hit + miss;
+
+  document.getElementById('kpiTotal').textContent = total;
+  document.getElementById('kpiPending').textContent = pending;
+  document.getElementById('kpiHit').textContent = hit;
+  document.getElementById('kpiMiss').textContent = miss;
+  document.getElementById('kpiHitPct').textContent = arrived ? Math.round(hit/arrived*100)+'% dari yang sudah tiba' : '-';
+  document.getElementById('kpiMissPct').textContent = arrived ? Math.round(miss/arrived*100)+'% dari yang sudah tiba' : '-';
+  document.getElementById('kpiHitPctBig').textContent = arrived ? Math.round(hit/arrived*100)+'%' : '0%';
+  document.getElementById('kpiHitSub').textContent = hit + ' dari ' + arrived + ' yang sudah tiba';
+
+  const bulanSet = new Set(data.map(r=>(r['BULAN']||'').trim()).filter(Boolean));
+  document.getElementById('kpiBulan').textContent = bulanSet.size===1 ? [...bulanSet][0] : (bulanSet.size+' bulan');
+
+  const leads = data.map(r=>{
+    const lt = r['Lead time'];
+    if(lt && !isNaN(parseFloat(lt))) return parseFloat(lt);
+    const d = diffDays(r._ship, r._arrival);
+    return d!==null ? d : null;
+  }).filter(v=>v!==null && !isNaN(v));
+  const avgLead = leads.length ? (leads.reduce((a,b)=>a+b,0)/leads.length) : null;
+  document.getElementById('kpiLead').textContent = avgLead!==null ? avgLead.toFixed(1) : '-';
+}
+
+function renderTable(data){
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  if(data.length === 0){
+    tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;color:var(--muted);padding:20px;">Tidak ada data sesuai filter</td></tr>';
+    return;
+  }
+  data.slice(0,1000).forEach(r=>{
+    const tr = document.createElement('tr');
+    const badgeMap = {hit:'hit',miss:'miss',pending:'pending',unknown:'unknown'};
+    const badgeLabel = {hit:'HIT',miss:'MISS',pending:'BELUM TIBA',unknown:'-'};
+    tr.innerHTML = `
+      <td>${r['Kota']||'-'}</td>
+      <td>${r['BULAN']||'-'}</td>
+      <td>${r['Container Num']||'-'}</td>
+      <td>${r['Nopol']||'-'}</td>
+      <td>${r['Expedition Id']||'-'}</td>
+      <td>${r['Vehicle Type']||'-'}</td>
+      <td>${fmtDate(r._ship)}</td>
+      <td>${fmtDate(r._eta)}</td>
+      <td>${fmtDate(r._receiptEta)}</td>
+      <td>${fmtDate(r._arrival)}</td>
+      <td>${fmtDate(r._receiptDate)}</td>
+      <td>${r._diff!==null ? r._diff : '-'}</td>
+      <td>${r['Lead time']||'-'}</td>
+      <td><span class="badge ${badgeMap[r._status]}">${badgeLabel[r._status]}</span></td>
+      <td>${r['Region']||'-'}</td>
+      <td>${r['KETERANGAN']||r['ISSUE']||'-'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function destroyChart(key){
+  if(charts[key]){ charts[key].destroy(); }
+}
+
+function renderCharts(data){
+  // Expedition HIT/MISS
+  const expedMap = {};
+  data.forEach(r=>{
+    const e = (r['Expedition Id']||'Tidak diketahui').trim() || 'Tidak diketahui';
+    if(!expedMap[e]) expedMap[e] = {hit:0, miss:0};
+    if(r._status==='hit') expedMap[e].hit++;
+    if(r._status==='miss') expedMap[e].miss++;
+  });
+  const expedLabels = Object.keys(expedMap).sort((a,b)=>(expedMap[b].hit+expedMap[b].miss)-(expedMap[a].hit+expedMap[a].miss)).slice(0,10);
+  destroyChart('expedition');
+  charts.expedition = new Chart(document.getElementById('chartExpedition'), {
+    type:'bar',
+    data:{
+      labels: expedLabels,
+      datasets:[
+        {label:'HIT', data: expedLabels.map(e=>expedMap[e].hit), backgroundColor:'#3f8f5b'},
+        {label:'MISS', data: expedLabels.map(e=>expedMap[e].miss), backgroundColor:'#c1452f'}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+      plugins:{
+        legend:{position:'bottom'},
+        datalabels:{
+          color:'#fff',
+          font:{weight:'bold', size:10},
+          formatter:(value, ctx)=>{
+            if(!value) return '';
+            const e = ctx.chart.data.labels[ctx.dataIndex];
+            const total = expedMap[e].hit + expedMap[e].miss;
+            const pct = total ? Math.round(value/total*100) : 0;
+            return value + ' (' + pct + '%)';
+          }
+        }
+      }
+    }
+  });
+
+  // Status pie
+  const statusCount = {hit:0,miss:0,pending:0,unknown:0};
+  data.forEach(r=> statusCount[r._status]++);
+  destroyChart('status');
+  charts.status = new Chart(document.getElementById('chartStatus'), {
+    type:'doughnut',
+    data:{
+      labels:['HIT (On Time)','MISS (Delay)','Belum Tiba','Tidak diketahui'],
+      datasets:[{
+        data:[statusCount.hit, statusCount.miss, statusCount.pending, statusCount.unknown],
+        backgroundColor:['#3f8f5b','#c1452f','#d8a32b','#9fb3c0']
+      }]
+    },
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}
+  });
+
+  // Region avg diff
+  const regionMap = {};
+  data.forEach(r=>{
+    if(r._diff===null) return;
+    const reg = (r['Region']||'Tidak diketahui').trim() || 'Tidak diketahui';
+    if(!regionMap[reg]) regionMap[reg] = [];
+    regionMap[reg].push(r._diff);
+  });
+  const regionLabels = Object.keys(regionMap);
+  const regionAvg = regionLabels.map(reg=>{
+    const arr = regionMap[reg];
+    return arr.reduce((a,b)=>a+b,0)/arr.length;
+  });
+  destroyChart('region');
+  charts.region = new Chart(document.getElementById('chartRegion'), {
+    type:'bar',
+    data:{
+      labels: regionLabels,
+      datasets:[{
+        label:'Rata-rata selisih (hari)',
+        data: regionAvg,
+        backgroundColor: regionAvg.map(v=> v>0 ? '#c1452f' : v<0 ? '#3f8f5b' : '#9fb3c0')
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{title:{display:true,text:'hari (positif = telat)'}}}
+    }
+  });
+
+  // Bulan trend
+  const bulanMap = {};
+  data.forEach(r=>{
+    const b = (r['BULAN']||'-').trim() || '-';
+    if(!bulanMap[b]) bulanMap[b] = {hit:0,miss:0,total:0};
+    bulanMap[b].total++;
+    if(r._status==='hit') bulanMap[b].hit++;
+    if(r._status==='miss') bulanMap[b].miss++;
+  });
+  const bulanLabels = Object.keys(bulanMap);
+  destroyChart('bulan');
+  charts.bulan = new Chart(document.getElementById('chartBulan'), {
+    type:'line',
+    data:{
+      labels: bulanLabels,
+      datasets:[
+        {label:'Total Pengiriman', data: bulanLabels.map(b=>bulanMap[b].total), borderColor:'#3d6a8a', backgroundColor:'#3d6a8a', tension:.3},
+        {label:'HIT', data: bulanLabels.map(b=>bulanMap[b].hit), borderColor:'#3f8f5b', backgroundColor:'#3f8f5b', tension:.3},
+        {label:'MISS', data: bulanLabels.map(b=>bulanMap[b].miss), borderColor:'#c1452f', backgroundColor:'#c1452f', tension:.3}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom'},
+        datalabels:{
+          color:'#fff',
+          font:{weight:'bold', size:11},
+          formatter:(value, ctx)=>{
+            if(!value) return '';
+            const total = ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
+            const pct = total ? Math.round(value/total*100) : 0;
+            return value + ' (' + pct + '%)';
+          }
+        }
+      }
+    }
+  });
+
+  // Issue per ekspedisi (stacked bar)
+  const issueTypes = new Set();
+  const expedIssueMap = {};
+  data.forEach(r=>{
+    const iss = (r['ISSUE']||'').trim();
+    if(!iss) return;
+    issueTypes.add(iss);
+    const e = (r['Expedition Id']||'Tidak diketahui').trim() || 'Tidak diketahui';
+    if(!expedIssueMap[e]) expedIssueMap[e] = {};
+    expedIssueMap[e][iss] = (expedIssueMap[e][iss]||0) + 1;
+  });
+  const issueTypesArr = [...issueTypes];
+  const expedWithIssue = Object.keys(expedIssueMap)
+    .sort((a,b)=>{
+      const ta = Object.values(expedIssueMap[a]).reduce((x,y)=>x+y,0);
+      const tb = Object.values(expedIssueMap[b]).reduce((x,y)=>x+y,0);
+      return tb-ta;
+    }).slice(0,10);
+  const issueColors = ['#c1452f','#d8a32b','#3d6a8a','#3f8f5b','#9b59b6','#e0732a','#16a085','#7f8c8d'];
+  destroyChart('issueExped');
+  charts.issueExped = new Chart(document.getElementById('chartIssueExped'), {
+    type:'bar',
+    data:{
+      labels: expedWithIssue,
+      datasets: issueTypesArr.map((iss,i)=>({
+        label: iss,
+        data: expedWithIssue.map(e => (expedIssueMap[e] && expedIssueMap[e][iss]) || 0),
+        backgroundColor: issueColors[i % issueColors.length]
+      }))
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+      plugins:{
+        legend:{position:'bottom'},
+        datalabels:{
+          color:'#fff',
+          font:{weight:'bold', size:9},
+          formatter:(value)=> value ? value : ''
+        }
+      }
+    }
+  });
+
+  // Distribusi jenis issue (doughnut)
+  const issueCount = {};
+  data.forEach(r=>{
+    const iss = (r['ISSUE']||'').trim();
+    if(!iss) return;
+    issueCount[iss] = (issueCount[iss]||0) + 1;
+  });
+  const issueLabels = Object.keys(issueCount);
+  destroyChart('issue');
+  charts.issue = new Chart(document.getElementById('chartIssue'), {
+    type:'doughnut',
+    data:{
+      labels: issueLabels.length ? issueLabels : ['Tidak ada issue'],
+      datasets:[{
+        data: issueLabels.length ? issueLabels.map(i=>issueCount[i]) : [1],
+        backgroundColor: issueLabels.length ? issueLabels.map((_,i)=>issueColors[i % issueColors.length]) : ['#9fb3c0']
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom'},
+        datalabels:{
+          color:'#fff',
+          font:{weight:'bold', size:11},
+          formatter:(value, ctx)=>{
+            if(!value) return '';
+            const total = ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
+            const pct = total ? Math.round(value/total*100) : 0;
+            return value + ' (' + pct + '%)';
+          }
+        }
+      }
+    }
+  });
+}
+
+['searchBox','filterStatus','filterExpedition','filterRegion','filterIssue','filterBulanMain','filterEtaFrom','filterEtaTo'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{ if(rawData.length) renderAll(); });
+  document.getElementById(id).addEventListener('change', ()=>{ if(rawData.length) renderAll(); });
+});
+
+document.getElementById('filterBulanMain').addEventListener('change', e=>{
+  const pills = document.querySelectorAll('#pillBulan .pill');
+  pills.forEach(p=>p.classList.toggle('active', p.dataset.value === e.target.value));
+});
+
+/* ===================== SHEET 2: Monitoring ETA Kontainer ===================== */
+let rawData2 = [];
+let eta2Headers = [];
+let eta2DateCols = [];
+
+function loadData2(){
+  const url = document.getElementById('sheetUrl2').value.trim();
+  if(!url){ alert('Masukkan link CSV publish dulu.'); return; }
+  document.getElementById('lastSync2').textContent = 'Memuat data...';
+
+  const cacheBust = (url.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+  const directUrl = url + cacheBust;
+  const attempts = [
+    { name:'langsung', url: directUrl },
+    { name:'allorigins', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl) },
+    { name:'corsproxy', url: 'https://corsproxy.io/?url=' + encodeURIComponent(directUrl) },
+    { name:'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' + directUrl },
+    { name:'jina-reader', url: 'https://r.jina.ai/' + directUrl }
+  ];
+  fetchSequential2(attempts, 0);
+}
+
+function fetchSequential2(attempts, idx){
+  if(idx >= attempts.length){
+    document.getElementById('lastSync2').textContent = 'Gagal memuat semua metode.';
+    return;
+  }
+  const attempt = attempts[idx];
+  document.getElementById('lastSync2').textContent = 'Memuat... (' + attempt.name + ')';
+  fetch(attempt.url)
+    .then(res => { if(!res.ok) throw new Error('HTTP '+res.status); return res.text(); })
+    .then(text => {
+      const t = text.trim();
+      const looksHtml = /^<!doctype html/i.test(t) || /^<html/i.test(t);
+      if(!t || t.length < 5 || looksHtml) throw new Error('Bukan CSV');
+      processCsvText2(text);
+    })
+    .catch(err => {
+      console.warn('Gagal via '+attempt.name+':', err.message);
+      fetchSequential2(attempts, idx+1);
+    });
+}
+
+function processCsvText2(text){
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^```[a-z]*\n?/i, '').replace(/```$/,'').trim();
+  const mdMarker = cleaned.indexOf('Markdown Content:');
+  if(mdMarker !== -1) cleaned = cleaned.substring(mdMarker + 'Markdown Content:'.length).trim();
+
+  const skipN = parseInt(document.getElementById('skipRows2').value) || 0;
+  if(skipN > 0){
+    const lines = cleaned.split('\n');
+    cleaned = lines.slice(skipN).join('\n');
+  }
+
+  // Parse tanpa header dulu untuk ambil kolom O-U berdasarkan posisi (index 14-20)
+  const results = Papa.parse(cleaned, { skipEmptyLines: true, delimiter: ',' });
+  const rows = results.data;
+  if(!rows || rows.length < 2){
+    document.getElementById('lastSync2').textContent = 'Data kosong / format tidak sesuai';
+    return;
+  }
+
+  const headerRow = rows[0];
+  // Kolom O=14 ... U=20 (0-indexed)
+  const colStart = 14, colEnd = 20;
+  eta2Headers = [];
+  for(let i=colStart; i<=colEnd; i++){
+    eta2Headers.push((headerRow[i] || ('Kolom '+String.fromCharCode(65+i))).trim());
+  }
+
+  rawData2 = rows.slice(1).map(row => {
+    const obj = {};
+    for(let i=colStart; i<=colEnd; i++){
+      obj[eta2Headers[i-colStart]] = row[i] !== undefined ? row[i] : '';
+    }
+    return obj;
+  }).filter(r => Object.values(r).some(v => v && String(v).trim() !== ''));
+
+  console.log('Sheet2 headers (O-U):', eta2Headers);
+  console.log('Sheet2 contoh baris:', rawData2[0]);
+
+  if(rawData2.length === 0){
+    document.getElementById('lastSync2').textContent = 'Data kosong / link tidak valid';
+    return;
+  }
+
+  // deteksi kolom yang berisi tanggal
+  eta2DateCols = eta2Headers.filter(h => {
+    return rawData2.some(r => parseDate(r[h]) !== null);
+  });
+
+  // isi parsed date untuk semua kolom tanggal
+  rawData2.forEach(r => {
+    eta2DateCols.forEach(h => { r['_date_'+h] = parseDate(r[h]); });
+  });
+
+  const colSel = document.getElementById('filterEta2Col');
+  colSel.innerHTML = '<option value="">Tanpa filter tanggal</option>' +
+    eta2DateCols.map(h => `<option value="${h}">${h}</option>`).join('');
+
+  document.getElementById('lastSync2').textContent =
+    'Tersambung — ' + rawData2.length + ' baris · update ' + new Date().toLocaleTimeString('id-ID');
+  document.getElementById('eta2Filters').style.display = 'flex';
+  document.getElementById('eta2TableWrap').style.display = 'block';
+
+  renderEta2Table();
+}
+
+function renderEta2Table(){
+  const head = document.getElementById('eta2Head');
+  const body = document.getElementById('eta2Body');
+  head.innerHTML = eta2Headers.map(h=>`<th>${h}</th>`).join('');
+
+  const colName = document.getElementById('filterEta2Col').value;
+  const from = document.getElementById('filterEta2From').value;
+  const to = document.getElementById('filterEta2To').value;
+
+  let filtered = rawData2;
+  if(colName){
+    filtered = filtered.filter(r=>{
+      const d = r['_date_'+colName];
+      if(from || to){
+        if(!d) return false;
+        if(from && d < new Date(from)) return false;
+        if(to){ const t = new Date(to); t.setHours(23,59,59,999); if(d > t) return false; }
+      }
+      return true;
+    });
+  }
+
+  if(filtered.length === 0){
+    body.innerHTML = `<tr><td colspan="${eta2Headers.length}" style="text-align:center;color:var(--muted);padding:20px;">Tidak ada data sesuai filter</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = filtered.slice(0,1000).map(r=>{
+    return '<tr>' + eta2Headers.map(h=>`<td>${r[h] || '-'}</td>`).join('') + '</tr>';
+  }).join('');
+}
+
+['filterEta2Col','filterEta2From','filterEta2To'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{ if(rawData2.length) renderEta2Table(); });
+});
+
+// Auto-load saat halaman pertama dibuka, supaya orang lain tinggal lihat
+window.addEventListener('DOMContentLoaded', ()=>{
+  if(document.getElementById('sheetUrl').value.trim()){
+    loadData();
+    if(document.getElementById('autoRefreshChk').checked){
+      startAutoRefresh();
+    }
+  }
+  if(document.getElementById('sheetUrl2').value.trim()){
+    loadData2();
+  }
+});
+</script>
+
+</body>
+</html>
