@@ -227,6 +227,58 @@
     border-color:var(--navy);
   }
 
+  .report-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+  .report-tab{
+    padding:10px 20px;
+    border:1px solid var(--line);
+    border-radius:8px 8px 0 0;
+    background:#fff;
+    color:var(--navy);
+    font-weight:600;
+    font-size:.85rem;
+    cursor:pointer;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+  }
+  .report-tab.active{
+    background:var(--navy);
+    color:#fff;
+    border-color:var(--navy);
+  }
+  .report-page{display:none;}
+  .report-page.active{display:block;}
+
+  .mapping-bar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    margin-bottom:14px;
+  }
+  .mapping-bar label{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:.72rem;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.5px;
+  }
+  .mapping-bar select{
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:.82rem;
+    background:var(--mist);
+    color:var(--text);
+    min-width:160px;
+  }
+
   table{
     width:100%;
     border-collapse:collapse;
@@ -333,6 +385,14 @@
 </div>
 
 <main>
+
+  <div class="report-tabs">
+    <div class="report-tab active" data-page="pageDOT">1. Delivery On Time</div>
+    <div class="report-tab" data-page="pageArmada">2. Pemenuhan Armada</div>
+    <div class="report-tab" data-page="pageCost">3. Transport Cost</div>
+  </div>
+
+  <div class="report-page active" id="pageDOT">
 
   <div class="howto-panel" id="howto">
     <strong>Cara publish Google Sheets sebagai CSV:</strong>
@@ -542,6 +602,122 @@
     </div>
   </div>
 
+  </div><!-- /pageDOT -->
+
+  <div class="report-page" id="pageArmada">
+    <div class="card" style="margin-bottom:18px;">
+      <h2>Sumber Data — Pemenuhan Armada</h2>
+      <div class="sourcebar" style="padding:0;border:none;margin-bottom:14px;">
+        <input type="text" id="armadaUrl" placeholder="Tempel link CSV publish 'Pemenuhan Armada'..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSGz9K1a7v-1BFLSWdCjrboAwAcg8w1fYK98pdGhdEHqj_q9hnqvRWjPdt1UubexOQ_IgOy7QGPS-3G/pub?gid=1123205242&single=true&output=csv">
+        <input type="text" id="armadaSkip" placeholder="Skip baris" value="0" style="max-width:90px;flex:none;">
+        <button onclick="loadArmada()">Muat Data</button>
+        <span class="status" id="armadaSync">Belum dimuat</span>
+      </div>
+      <div class="mapping-bar" id="armadaMapping" style="display:none;">
+        <label>Kolom Bulan <select id="armadaColBulan"></select></label>
+        <label>Kolom Kategori (Ekspedisi/Region/Vehicle) <select id="armadaColKategori"></select></label>
+        <label>Kolom Request Unit <select id="armadaColRequest"></select></label>
+        <label>Kolom Realisasi Unit <select id="armadaColRealisasi"></select></label>
+        <button onclick="renderArmada()">Terapkan</button>
+      </div>
+    </div>
+
+    <div class="kpi-row" id="armadaKpiRow" style="display:none;">
+      <div class="kpi">
+        <div class="label">Total Request Unit</div>
+        <div class="value" id="armadaKpiRequest">0</div>
+      </div>
+      <div class="kpi green">
+        <div class="label">Total Realisasi Unit</div>
+        <div class="value" id="armadaKpiRealisasi">0</div>
+      </div>
+      <div class="kpi orange">
+        <div class="label">Selisih (Kurang)</div>
+        <div class="value" id="armadaKpiGap">0</div>
+      </div>
+      <div class="kpi amber">
+        <div class="label">% Pemenuhan</div>
+        <div class="value" id="armadaKpiPct">0%</div>
+      </div>
+    </div>
+
+    <div class="grid2" id="armadaCharts" style="display:none;">
+      <div class="card">
+        <h2>Request vs Realisasi per Kategori</h2>
+        <div class="chart-wrap"><canvas id="chartArmadaCat"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Tren Pemenuhan per Bulan</h2>
+        <div class="chart-wrap"><canvas id="chartArmadaBulan"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" id="armadaTableCard" style="display:none;">
+      <h2>Data Pemenuhan Armada</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr id="armadaHead"></tr></thead>
+          <tbody id="armadaBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /pageArmada -->
+
+  <div class="report-page" id="pageCost">
+    <div class="card" style="margin-bottom:18px;">
+      <h2>Sumber Data — Transport Cost</h2>
+      <div class="sourcebar" style="padding:0;border:none;margin-bottom:14px;">
+        <input type="text" id="costUrl" placeholder="Tempel link CSV publish 'Transport Cost'..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vS5DYccCkQ-4CubMoR655MsH-DYNuwipMvTPSQ9zL9UBLMsuJkZWLyxWPc0X4y4tBQB1OQAUCSi07cr/pub?gid=1774501317&single=true&output=csv">
+        <input type="text" id="costSkip" placeholder="Skip baris" value="0" style="max-width:90px;flex:none;">
+        <button onclick="loadCost()">Muat Data</button>
+        <span class="status" id="costSync">Belum dimuat</span>
+      </div>
+      <div class="mapping-bar" id="costMapping" style="display:none;">
+        <label>Kolom Bulan <select id="costColBulan"></select></label>
+        <label>Kolom Kategori (Ekspedisi/Region/Vehicle) <select id="costColKategori"></select></label>
+        <label>Kolom Budget Cost <select id="costColBudget"></select></label>
+        <label>Kolom Actual Cost <select id="costColActual"></select></label>
+        <button onclick="renderCost()">Terapkan</button>
+      </div>
+    </div>
+
+    <div class="kpi-row" id="costKpiRow" style="display:none;">
+      <div class="kpi">
+        <div class="label">Total Budget</div>
+        <div class="value" id="costKpiBudget">Rp 0</div>
+      </div>
+      <div class="kpi green">
+        <div class="label">Total Actual</div>
+        <div class="value" id="costKpiActual">Rp 0</div>
+      </div>
+      <div class="kpi red" id="costKpiSelisihCard">
+        <div class="label">Selisih (Actual - Budget)</div>
+        <div class="value" id="costKpiSelisih">Rp 0</div>
+        <div class="sub" id="costKpiSelisihPct">0%</div>
+      </div>
+    </div>
+
+    <div class="grid2" id="costCharts" style="display:none;">
+      <div class="card">
+        <h2>Budget vs Actual per Kategori</h2>
+        <div class="chart-wrap"><canvas id="chartCostCat"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Tren Cost per Bulan</h2>
+        <div class="chart-wrap"><canvas id="chartCostBulan"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" id="costTableCard" style="display:none;">
+      <h2>Data Transport Cost</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr id="costHead"></tr></thead>
+          <tbody id="costBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /pageCost -->
 
 </main>
 
@@ -1397,7 +1573,264 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(document.getElementById('sheetUrl2').value.trim()){
     loadData2();
   }
+  if(document.getElementById('armadaUrl').value.trim()){
+    loadArmada();
+  }
+  if(document.getElementById('costUrl').value.trim()){
+    loadCost();
+  }
 });
+
+/* ===================== TAB NAVIGASI ===================== */
+document.querySelectorAll('.report-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.report-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.report-page').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.page).classList.add('active');
+  });
+});
+
+/* ===================== GENERIC CSV LOADER ===================== */
+function genericLoad(url, skipEl, onSuccess, onStatus){
+  if(!url){ return; }
+  const cacheBust = (url.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+  const directUrl = url + cacheBust;
+  const attempts = [
+    { name:'langsung', url: directUrl },
+    { name:'allorigins', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl) },
+    { name:'corsproxy', url: 'https://corsproxy.io/?url=' + encodeURIComponent(directUrl) },
+    { name:'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' + directUrl },
+    { name:'jina-reader', url: 'https://r.jina.ai/' + directUrl }
+  ];
+  function attempt(idx){
+    if(idx >= attempts.length){ onStatus('Gagal memuat semua metode.'); return; }
+    const a = attempts[idx];
+    onStatus('Memuat... (' + a.name + ')');
+    fetch(a.url)
+      .then(res => { if(!res.ok) throw new Error('HTTP '+res.status); return res.text(); })
+      .then(text => {
+        const t = text.trim();
+        if(!t || t.length < 5 || /^<!doctype html/i.test(t) || /^<html/i.test(t)) throw new Error('Bukan CSV');
+        let cleaned = t;
+        cleaned = cleaned.replace(/^```[a-z]*\n?/i, '').replace(/```$/,'').trim();
+        const mdMarker = cleaned.indexOf('Markdown Content:');
+        if(mdMarker !== -1) cleaned = cleaned.substring(mdMarker + 'Markdown Content:'.length).trim();
+        const skipN = parseInt(skipEl.value) || 0;
+        if(skipN > 0) cleaned = cleaned.split('\n').slice(skipN).join('\n');
+        const results = Papa.parse(cleaned, { header:true, skipEmptyLines:true, delimiter:',', transformHeader:h=>h.trim() });
+        if(!results.data || results.data.length === 0){ onStatus('Data kosong / format tidak sesuai'); return; }
+        onSuccess(results.data, results.meta.fields);
+      })
+      .catch(err => { console.warn('Gagal via '+a.name+':', err.message); attempt(idx+1); });
+  }
+  attempt(0);
+}
+
+function toNumber(v){
+  if(v === null || v === undefined) return 0;
+  const cleaned = String(v).replace(/[^0-9.\-]/g, '');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
+function fmtRupiah(n){
+  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
+}
+
+function fillMappingSelect(id, fields, guesses){
+  const sel = document.getElementById(id);
+  sel.innerHTML = fields.map(f=>`<option value="${f}">${f}</option>`).join('');
+  for(const g of guesses){
+    const found = fields.find(f => f.toLowerCase().includes(g));
+    if(found){ sel.value = found; break; }
+  }
+}
+
+/* ===================== PEMENUHAN ARMADA ===================== */
+let armadaData = [], armadaFields = [];
+function loadArmada(){
+  const url = document.getElementById('armadaUrl').value.trim();
+  if(!url){ alert('Masukkan link CSV publish dulu.'); return; }
+  genericLoad(url, document.getElementById('armadaSkip'),
+    (data, fields)=>{
+      armadaData = data; armadaFields = fields;
+      document.getElementById('armadaSync').textContent = 'Tersambung — ' + data.length + ' baris · update ' + new Date().toLocaleTimeString('id-ID');
+      document.getElementById('armadaMapping').style.display = 'flex';
+      fillMappingSelect('armadaColBulan', fields, ['bulan','month']);
+      fillMappingSelect('armadaColKategori', fields, ['expedition','ekspedisi','region','vehicle','kategori']);
+      fillMappingSelect('armadaColRequest', fields, ['request','rencana','plan']);
+      fillMappingSelect('armadaColRealisasi', fields, ['realisasi','actual','real']);
+      renderArmada();
+    },
+    (msg)=>{ document.getElementById('armadaSync').textContent = msg; }
+  );
+}
+
+function renderArmada(){
+  if(!armadaData.length) return;
+  const colBulan = document.getElementById('armadaColBulan').value;
+  const colKat = document.getElementById('armadaColKategori').value;
+  const colReq = document.getElementById('armadaColRequest').value;
+  const colReal = document.getElementById('armadaColRealisasi').value;
+
+  let totalReq = 0, totalReal = 0;
+  const byKat = {}, byBulan = {};
+  armadaData.forEach(r=>{
+    const req = toNumber(r[colReq]);
+    const real = toNumber(r[colReal]);
+    totalReq += req; totalReal += real;
+    const kat = (r[colKat]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
+    const bln = (r[colBulan]||'-').toString().trim() || '-';
+    if(!byKat[kat]) byKat[kat] = {req:0, real:0};
+    byKat[kat].req += req; byKat[kat].real += real;
+    if(!byBulan[bln]) byBulan[bln] = {req:0, real:0};
+    byBulan[bln].req += req; byBulan[bln].real += real;
+  });
+
+  const gap = totalReq - totalReal;
+  const pct = totalReq ? Math.round(totalReal/totalReq*100) : 0;
+  document.getElementById('armadaKpiRequest').textContent = totalReq.toLocaleString('id-ID');
+  document.getElementById('armadaKpiRealisasi').textContent = totalReal.toLocaleString('id-ID');
+  document.getElementById('armadaKpiGap').textContent = gap.toLocaleString('id-ID');
+  document.getElementById('armadaKpiPct').textContent = pct + '%';
+  document.getElementById('armadaKpiRow').style.display = '';
+  document.getElementById('armadaCharts').style.display = '';
+  document.getElementById('armadaTableCard').style.display = '';
+
+  const katLabels = Object.keys(byKat).sort((a,b)=>byKat[b].req-byKat[a].req);
+  destroyChart('armadaCat');
+  charts.armadaCat = new Chart(document.getElementById('chartArmadaCat'), {
+    type:'bar',
+    data:{
+      labels: katLabels,
+      datasets:[
+        {label:'Request', data: katLabels.map(k=>byKat[k].req), backgroundColor:'#3d6a8a'},
+        {label:'Realisasi', data: katLabels.map(k=>byKat[k].real), backgroundColor:'#3f8f5b'}
+      ]
+    },
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'}, datalabels:{color:'#1b2a35', font:{weight:'bold',size:9}, formatter:v=>v||''}}}
+  });
+
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const bulanLabels = Object.keys(byBulan).sort((a,b)=>{
+    const ia=bulanOrder.indexOf(a), ib=bulanOrder.indexOf(b);
+    if(ia===-1&&ib===-1) return a.localeCompare(b);
+    if(ia===-1) return 1; if(ib===-1) return -1;
+    return ia-ib;
+  });
+  destroyChart('armadaBulan');
+  charts.armadaBulan = new Chart(document.getElementById('chartArmadaBulan'), {
+    type:'line',
+    data:{
+      labels: bulanLabels,
+      datasets:[
+        {label:'Request', data: bulanLabels.map(b=>byBulan[b].req), borderColor:'#3d6a8a', backgroundColor:'#3d6a8a', tension:.3},
+        {label:'Realisasi', data: bulanLabels.map(b=>byBulan[b].real), borderColor:'#3f8f5b', backgroundColor:'#3f8f5b', tension:.3}
+      ]
+    },
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}, datalabels:{display:false}}}
+  });
+
+  const head = document.getElementById('armadaHead');
+  const body = document.getElementById('armadaBody');
+  head.innerHTML = armadaFields.map(f=>`<th>${f}</th>`).join('');
+  body.innerHTML = armadaData.slice(0,1000).map(r=>'<tr>'+armadaFields.map(f=>`<td>${r[f]||'-'}</td>`).join('')+'</tr>').join('');
+}
+
+/* ===================== TRANSPORT COST ===================== */
+let costData = [], costFields = [];
+function loadCost(){
+  const url = document.getElementById('costUrl').value.trim();
+  if(!url){ alert('Masukkan link CSV publish dulu.'); return; }
+  genericLoad(url, document.getElementById('costSkip'),
+    (data, fields)=>{
+      costData = data; costFields = fields;
+      document.getElementById('costSync').textContent = 'Tersambung — ' + data.length + ' baris · update ' + new Date().toLocaleTimeString('id-ID');
+      document.getElementById('costMapping').style.display = 'flex';
+      fillMappingSelect('costColBulan', fields, ['bulan','month']);
+      fillMappingSelect('costColKategori', fields, ['expedition','ekspedisi','region','vehicle','kategori']);
+      fillMappingSelect('costColBudget', fields, ['budget','anggaran','rencana']);
+      fillMappingSelect('costColActual', fields, ['actual','aktual','realisasi']);
+      renderCost();
+    },
+    (msg)=>{ document.getElementById('costSync').textContent = msg; }
+  );
+}
+
+function renderCost(){
+  if(!costData.length) return;
+  const colBulan = document.getElementById('costColBulan').value;
+  const colKat = document.getElementById('costColKategori').value;
+  const colBudget = document.getElementById('costColBudget').value;
+  const colActual = document.getElementById('costColActual').value;
+
+  let totalBudget = 0, totalActual = 0;
+  const byKat = {}, byBulan = {};
+  costData.forEach(r=>{
+    const b = toNumber(r[colBudget]);
+    const a = toNumber(r[colActual]);
+    totalBudget += b; totalActual += a;
+    const kat = (r[colKat]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
+    const bln = (r[colBulan]||'-').toString().trim() || '-';
+    if(!byKat[kat]) byKat[kat] = {budget:0, actual:0};
+    byKat[kat].budget += b; byKat[kat].actual += a;
+    if(!byBulan[bln]) byBulan[bln] = {budget:0, actual:0};
+    byBulan[bln].budget += b; byBulan[bln].actual += a;
+  });
+
+  const selisih = totalActual - totalBudget;
+  const selisihPct = totalBudget ? Math.round(selisih/totalBudget*100) : 0;
+  document.getElementById('costKpiBudget').textContent = fmtRupiah(totalBudget);
+  document.getElementById('costKpiActual').textContent = fmtRupiah(totalActual);
+  document.getElementById('costKpiSelisih').textContent = fmtRupiah(selisih);
+  document.getElementById('costKpiSelisihPct').textContent = (selisih>=0?'+':'') + selisihPct + '% dari budget';
+  document.getElementById('costKpiSelisihCard').className = 'kpi ' + (selisih > 0 ? 'red' : 'green');
+  document.getElementById('costKpiRow').style.display = '';
+  document.getElementById('costCharts').style.display = '';
+  document.getElementById('costTableCard').style.display = '';
+
+  const katLabels = Object.keys(byKat).sort((a,b)=>byKat[b].budget-byKat[a].budget);
+  destroyChart('costCat');
+  charts.costCat = new Chart(document.getElementById('chartCostCat'), {
+    type:'bar',
+    data:{
+      labels: katLabels,
+      datasets:[
+        {label:'Budget', data: katLabels.map(k=>byKat[k].budget), backgroundColor:'#3d6a8a'},
+        {label:'Actual', data: katLabels.map(k=>byKat[k].actual), backgroundColor:'#e0732a'}
+      ]
+    },
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'}, datalabels:{color:'#1b2a35', font:{weight:'bold',size:9}, formatter:v=> v? Math.round(v).toLocaleString('id-ID') : ''}}}
+  });
+
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const bulanLabels = Object.keys(byBulan).sort((a,b)=>{
+    const ia=bulanOrder.indexOf(a), ib=bulanOrder.indexOf(b);
+    if(ia===-1&&ib===-1) return a.localeCompare(b);
+    if(ia===-1) return 1; if(ib===-1) return -1;
+    return ia-ib;
+  });
+  destroyChart('costBulan');
+  charts.costBulan = new Chart(document.getElementById('chartCostBulan'), {
+    type:'line',
+    data:{
+      labels: bulanLabels,
+      datasets:[
+        {label:'Budget', data: bulanLabels.map(b=>byBulan[b].budget), borderColor:'#3d6a8a', backgroundColor:'#3d6a8a', tension:.3},
+        {label:'Actual', data: bulanLabels.map(b=>byBulan[b].actual), borderColor:'#e0732a', backgroundColor:'#e0732a', tension:.3}
+      ]
+    },
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}, datalabels:{display:false}}}
+  });
+
+  const head = document.getElementById('costHead');
+  const body = document.getElementById('costBody');
+  head.innerHTML = costFields.map(f=>`<th>${f}</th>`).join('');
+  body.innerHTML = costData.slice(0,1000).map(r=>'<tr>'+costFields.map(f=>`<td>${r[f]||'-'}</td>`).join('')+'</tr>').join('');
+}
 </script>
 
 </body>
