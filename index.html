@@ -510,7 +510,7 @@
 
     <div class="grid2">
       <div class="card" style="grid-column:1 / -1;">
-        <h2>Jenis Issue per Ekspedisi (Pareto)</h2>
+        <h2>Jenis Issue (Pareto)</h2>
         <div class="chart-wrap"><canvas id="chartIssueExped"></canvas></div>
       </div>
     </div>
@@ -1485,16 +1485,15 @@ function renderCharts(data){
     }
   });
 
-  // Issue per ekspedisi (Pareto: total issue per ekspedisi + kumulatif %)
-  const expedIssueTotal = {};
+  // Jenis Issue (Pareto: total per jenis issue + kumulatif %)
+  const issueTotal = {};
   data.forEach(r=>{
     const iss = (r['ISSUE']||'').trim();
     if(!iss) return;
-    const e = (r['Expedition Id']||'Tidak diketahui').trim() || 'Tidak diketahui';
-    expedIssueTotal[e] = (expedIssueTotal[e]||0) + 1;
+    issueTotal[iss] = (issueTotal[iss]||0) + 1;
   });
-  const paretoLabels = Object.keys(expedIssueTotal).sort((a,b)=>expedIssueTotal[b]-expedIssueTotal[a]);
-  const paretoValues = paretoLabels.map(e=>expedIssueTotal[e]);
+  const paretoLabels = Object.keys(issueTotal).sort((a,b)=>issueTotal[b]-issueTotal[a]);
+  const paretoValues = paretoLabels.map(e=>issueTotal[e]);
   const grandTotal = paretoValues.reduce((a,b)=>a+b,0);
   let running = 0;
   const cumulativePct = paretoValues.map(v=>{
