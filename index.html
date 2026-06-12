@@ -426,8 +426,9 @@
     </div>
 
     <div class="grid2">
-      <div class="card">
-        <h2>Performa per Ekspedisi (HIT vs MISS)</h2>
+      <div class="card" id="cardExpedition">
+        <h2>Performa per Ekspedisi (HIT vs MISS per Bulan)</h2>
+        <p id="expedHint" style="font-size:.8rem;color:var(--muted);margin:-6px 0 10px;">Klik salah satu tombol Ekspedisi di atas untuk melihat performa bulanan ekspedisi tersebut.</p>
         <div class="chart-wrap"><canvas id="chartExpedition"></canvas></div>
       </div>
       <div class="card">
@@ -438,23 +439,19 @@
 
     <div class="grid2">
       <div class="card">
-        <h2>Rata-rata Selisih ETA vs ATA per Region</h2>
-        <div class="chart-wrap"><canvas id="chartRegion"></canvas></div>
-      </div>
-      <div class="card">
         <h2>Tren Pengiriman per Bulan</h2>
         <div class="chart-wrap"><canvas id="chartBulan"></canvas></div>
-      </div>
-    </div>
-
-    <div class="grid2">
-      <div class="card">
-        <h2>Jenis Issue per Ekspedisi</h2>
-        <div class="chart-wrap"><canvas id="chartIssueExped"></canvas></div>
       </div>
       <div class="card">
         <h2>Distribusi Jenis Issue</h2>
         <div class="chart-wrap"><canvas id="chartIssue"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card" style="grid-column:1 / -1;">
+        <h2>Jenis Issue per Ekspedisi (Pareto)</h2>
+        <div class="chart-wrap"><canvas id="chartIssueExped"></canvas></div>
       </div>
     </div>
 
@@ -939,7 +936,7 @@ function renderGroupBy(data){
       plugins:{
         legend:{position:'bottom'},
         datalabels:{
-          color:'#fff', font:{weight:'bold', size:9},
+          color:'#1b2a35', font:{weight:'bold', size:9},
           formatter:(value)=> value ? value : ''
         }
       }
@@ -1016,44 +1013,65 @@ function destroyChart(key){
 }
 
 function renderCharts(data){
-  // Expedition HIT/MISS
-  const expedMap = {};
-  data.forEach(r=>{
-    const e = (r['Expedition Id']||'Tidak diketahui').trim() || 'Tidak diketahui';
-    if(!expedMap[e]) expedMap[e] = {hit:0, miss:0};
-    if(r._status==='hit') expedMap[e].hit++;
-    if(r._status==='miss') expedMap[e].miss++;
-  });
-  const expedLabels = Object.keys(expedMap).sort((a,b)=>(expedMap[b].hit+expedMap[b].miss)-(expedMap[a].hit+expedMap[a].miss)).slice(0,10);
+  // Performa per Ekspedisi (HIT vs MISS per Bulan) — hanya muncul jika ekspedisi dipilih
+  const expedPillVal = getPillValue('pillExpedisi');
+  const cardExpedition = document.getElementById('cardExpedition');
+  const expedHint = document.getElementById('expedHint');
   destroyChart('expedition');
-  charts.expedition = new Chart(document.getElementById('chartExpedition'), {
-    type:'bar',
-    data:{
-      labels: expedLabels,
-      datasets:[
-        {label:'HIT', data: expedLabels.map(e=>expedMap[e].hit), backgroundColor:'#3f8f5b'},
-        {label:'MISS', data: expedLabels.map(e=>expedMap[e].miss), backgroundColor:'#c1452f'}
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
-      plugins:{
-        legend:{position:'bottom'},
-        datalabels:{
-          color:'#fff',
-          font:{weight:'bold', size:10},
-          formatter:(value, ctx)=>{
-            if(!value) return '';
-            const e = ctx.chart.data.labels[ctx.dataIndex];
-            const total = expedMap[e].hit + expedMap[e].miss;
-            const pct = total ? Math.round(value/total*100) : 0;
-            return value + ' (' + pct + '%)';
+
+  if(!expedPillVal){
+    expedHint.style.display = 'block';
+    const ctx = document.getElementById('chartExpedition');
+    charts.expedition = new Chart(ctx, { type:'bar', data:{labels:[], datasets:[]}, options:{responsive:true, maintainAspectRatio:false} });
+  } else {
+    expedHint.style.display = 'none';
+    document.querySelector('#cardExpedition h2').textContent = 'Performa Ekspedisi "' + expedPillVal + '" per Bulan (HIT vs MISS)';
+
+    const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    const expedBulanMap = {};
+    data.forEach(r=>{
+      const b = (r['BULAN']||'-').trim() || '-';
+      if(!expedBulanMap[b]) expedBulanMap[b] = {hit:0, miss:0};
+      if(r._status==='hit') expedBulanMap[b].hit++;
+      if(r._status==='miss') expedBulanMap[b].miss++;
+    });
+    const labels = Object.keys(expedBulanMap).sort((a,b)=>{
+      const ia = bulanOrder.indexOf(a), ib = bulanOrder.indexOf(b);
+      if(ia===-1 && ib===-1) return a.localeCompare(b);
+      if(ia===-1) return 1;
+      if(ib===-1) return -1;
+      return ia-ib;
+    });
+
+    charts.expedition = new Chart(document.getElementById('chartExpedition'), {
+      type:'bar',
+      data:{
+        labels: labels,
+        datasets:[
+          {label:'HIT', data: labels.map(b=>expedBulanMap[b].hit), backgroundColor:'#3f8f5b'},
+          {label:'MISS', data: labels.map(b=>expedBulanMap[b].miss), backgroundColor:'#c1452f'}
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+        plugins:{
+          legend:{position:'bottom'},
+          datalabels:{
+            color:'#1b2a35',
+            font:{weight:'bold', size:10},
+            formatter:(value, ctx)=>{
+              if(!value) return '';
+              const b = ctx.chart.data.labels[ctx.dataIndex];
+              const total = expedBulanMap[b].hit + expedBulanMap[b].miss;
+              const pct = total ? Math.round(value/total*100) : 0;
+              return value + ' (' + pct + '%)';
+            }
           }
         }
       }
-    }
-  });
+    });
+  }
 
   // Status pie
   const statusCount = {hit:0,miss:0,pending:0,unknown:0};
@@ -1069,37 +1087,6 @@ function renderCharts(data){
       }]
     },
     options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}
-  });
-
-  // Region avg diff
-  const regionMap = {};
-  data.forEach(r=>{
-    if(r._diff===null) return;
-    const reg = (r['Region']||'Tidak diketahui').trim() || 'Tidak diketahui';
-    if(!regionMap[reg]) regionMap[reg] = [];
-    regionMap[reg].push(r._diff);
-  });
-  const regionLabels = Object.keys(regionMap);
-  const regionAvg = regionLabels.map(reg=>{
-    const arr = regionMap[reg];
-    return arr.reduce((a,b)=>a+b,0)/arr.length;
-  });
-  destroyChart('region');
-  charts.region = new Chart(document.getElementById('chartRegion'), {
-    type:'bar',
-    data:{
-      labels: regionLabels,
-      datasets:[{
-        label:'Rata-rata selisih (hari)',
-        data: regionAvg,
-        backgroundColor: regionAvg.map(v=> v>0 ? '#c1452f' : v<0 ? '#3f8f5b' : '#9fb3c0')
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{y:{title:{display:true,text:'hari (positif = telat)'}}}
-    }
   });
 
   // Bulan trend
@@ -1128,7 +1115,7 @@ function renderCharts(data){
       plugins:{
         legend:{position:'bottom'},
         datalabels:{
-          color:'#fff',
+          color:'#1b2a35',
           font:{weight:'bold', size:11},
           formatter:(value, ctx)=>{
             if(!value) return '';
@@ -1141,51 +1128,73 @@ function renderCharts(data){
     }
   });
 
-  // Issue per ekspedisi (stacked bar)
-  const issueTypes = new Set();
-  const expedIssueMap = {};
+  // Issue per ekspedisi (Pareto: total issue per ekspedisi + kumulatif %)
+  const expedIssueTotal = {};
   data.forEach(r=>{
     const iss = (r['ISSUE']||'').trim();
     if(!iss) return;
-    issueTypes.add(iss);
     const e = (r['Expedition Id']||'Tidak diketahui').trim() || 'Tidak diketahui';
-    if(!expedIssueMap[e]) expedIssueMap[e] = {};
-    expedIssueMap[e][iss] = (expedIssueMap[e][iss]||0) + 1;
+    expedIssueTotal[e] = (expedIssueTotal[e]||0) + 1;
   });
-  const issueTypesArr = [...issueTypes];
-  const expedWithIssue = Object.keys(expedIssueMap)
-    .sort((a,b)=>{
-      const ta = Object.values(expedIssueMap[a]).reduce((x,y)=>x+y,0);
-      const tb = Object.values(expedIssueMap[b]).reduce((x,y)=>x+y,0);
-      return tb-ta;
-    }).slice(0,10);
-  const issueColors = ['#c1452f','#d8a32b','#3d6a8a','#3f8f5b','#9b59b6','#e0732a','#16a085','#7f8c8d'];
+  const paretoLabels = Object.keys(expedIssueTotal).sort((a,b)=>expedIssueTotal[b]-expedIssueTotal[a]);
+  const paretoValues = paretoLabels.map(e=>expedIssueTotal[e]);
+  const grandTotal = paretoValues.reduce((a,b)=>a+b,0);
+  let running = 0;
+  const cumulativePct = paretoValues.map(v=>{
+    running += v;
+    return grandTotal ? Math.round(running/grandTotal*100) : 0;
+  });
+
   destroyChart('issueExped');
   charts.issueExped = new Chart(document.getElementById('chartIssueExped'), {
-    type:'bar',
     data:{
-      labels: expedWithIssue,
-      datasets: issueTypesArr.map((iss,i)=>({
-        label: iss,
-        data: expedWithIssue.map(e => (expedIssueMap[e] && expedIssueMap[e][iss]) || 0),
-        backgroundColor: issueColors[i % issueColors.length]
-      }))
+      labels: paretoLabels,
+      datasets:[
+        {
+          type:'bar',
+          label:'Jumlah Issue',
+          data: paretoValues,
+          backgroundColor:'#e0732a',
+          order:2,
+          yAxisID:'y'
+        },
+        {
+          type:'line',
+          label:'Kumulatif %',
+          data: cumulativePct,
+          borderColor:'#3d6a8a',
+          backgroundColor:'#3d6a8a',
+          tension:.2,
+          yAxisID:'y1',
+          order:1,
+          datalabels:{
+            color:'#3d6a8a',
+            align:'top',
+            font:{weight:'bold', size:10},
+            formatter:(value)=> value + '%'
+          }
+        }
+      ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
-      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+      scales:{
+        y:{ type:'linear', position:'left', beginAtZero:true, title:{display:true,text:'Jumlah Issue'} },
+        y1:{ type:'linear', position:'right', min:0, max:100, grid:{drawOnChartArea:false}, title:{display:true,text:'Kumulatif %'} }
+      },
       plugins:{
         legend:{position:'bottom'},
         datalabels:{
-          color:'#fff',
-          font:{weight:'bold', size:9},
-          formatter:(value)=> value ? value : ''
+          color:'#1b2a35',
+          font:{weight:'bold', size:10},
+          formatter:(value, ctx)=> ctx.dataset.type==='bar' ? (value ? value : '') : ''
         }
       }
     }
   });
 
   // Distribusi jenis issue (doughnut)
+  const issueColors = ['#c1452f','#d8a32b','#3d6a8a','#3f8f5b','#9b59b6','#e0732a','#16a085','#7f8c8d'];
   const issueCount = {};
   data.forEach(r=>{
     const iss = (r['ISSUE']||'').trim();
@@ -1208,7 +1217,7 @@ function renderCharts(data){
       plugins:{
         legend:{position:'bottom'},
         datalabels:{
-          color:'#fff',
+          color:'#1b2a35',
           font:{weight:'bold', size:11},
           formatter:(value, ctx)=>{
             if(!value) return '';
