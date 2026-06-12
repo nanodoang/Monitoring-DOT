@@ -516,6 +516,29 @@
     </div>
 
     <div class="card">
+      <h2>Delivery On Time — Darat & Laut (per Minggu)</h2>
+      <div class="grid2">
+        <div>
+          <h3 style="text-align:center;color:var(--steel);margin:0 0 8px;">DOT Darat</h3>
+          <div class="chart-wrap"><canvas id="chartDOTDarat"></canvas></div>
+        </div>
+        <div>
+          <h3 style="text-align:center;color:var(--steel);margin:0 0 8px;">DOT Laut</h3>
+          <div class="chart-wrap"><canvas id="chartDOTLaut"></canvas></div>
+        </div>
+      </div>
+
+      <div class="table-scroll" style="margin-top:18px;max-height:360px;">
+        <table>
+          <thead>
+            <tr><th>Kategori</th><th>Issue</th><th>Jumlah Miss</th><th>%</th></tr>
+          </thead>
+          <tbody id="issueDaratLautBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>Ringkasan per Kategori</h2>
       <div class="filters">
         <select id="groupBySelect">
@@ -1061,6 +1084,108 @@ function renderAll(){
   renderTable(data);
   renderCharts(data);
   renderGroupBy(data);
+  renderDOTDaratLaut(data);
+}
+
+function getDaratLaut(vehicleType){
+  const v = (vehicleType||'').toString().toLowerCase();
+  if(v.includes('kontainer') || v.includes('container') || v.includes('cont')) return 'Laut';
+  return 'Darat';
+}
+
+function getWeekNum(d){
+  const onejan = new Date(d.getFullYear(),0,1);
+  return Math.ceil((((d - onejan) / 86400000) + onejan.getDay()+1)/7);
+}
+
+function renderDOTDaratLaut(data){
+  const weekGroups = { Darat:{}, Laut:{} };
+  const issueGroups = { Darat:{}, Laut:{} };
+
+  data.forEach(r=>{
+    const kat = getDaratLaut(r['Vehicle Type']);
+    const dRef = r._eta || r._ship;
+    let wk = 'Total';
+    if(dRef) wk = 'Week ' + getWeekNum(dRef);
+
+    if(!weekGroups[kat][wk]) weekGroups[kat][wk] = {hit:0, miss:0};
+    if(r._status==='hit') weekGroups[kat][wk].hit++;
+    else if(r._status==='miss') weekGroups[kat][wk].miss++;
+
+    const iss = (r['ISSUE']||'').trim();
+    if(r._status==='miss' && iss){
+      issueGroups[kat][iss] = (issueGroups[kat][iss]||0) + 1;
+    }
+  });
+
+  function buildChart(canvasId, groups){
+    const weekKeys = Object.keys(groups).filter(w=>w!=='Total').sort((a,b)=>{
+      return parseInt(a.replace('Week ','')) - parseInt(b.replace('Week ',''));
+    });
+    let totalHit=0, totalMiss=0;
+    weekKeys.forEach(w=>{ totalHit+=groups[w].hit; totalMiss+=groups[w].miss; });
+    const labels = [...weekKeys, 'Total'];
+    const hitData = [...weekKeys.map(w=>groups[w].hit), totalHit];
+    const missData = [...weekKeys.map(w=>groups[w].miss), totalMiss];
+    const achieveData = labels.map((l,i)=>{
+      const h = hitData[i], m = missData[i], t = h+m;
+      return t ? Math.round(h/t*1000)/10 : 0;
+    });
+
+    destroyChart(canvasId);
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      data:{
+        labels: labels,
+        datasets:[
+          {type:'bar', label:'Hit', data:hitData, backgroundColor:'#3d6a8a', stack:'s', order:2,
+            datalabels:{color:'#fff', font:{weight:'bold',size:11}, formatter:v=>v||''}},
+          {type:'bar', label:'Miss', data:missData, backgroundColor:'#e0732a', stack:'s', order:2,
+            datalabels:{color:'#fff', font:{weight:'bold',size:11}, formatter:v=>v||''}},
+          {type:'line', label:'Achieve', data:achieveData, borderColor:'#3f8f5b', backgroundColor:'#3f8f5b',
+            tension:.3, yAxisID:'y1', order:1,
+            datalabels:{color:'#1b2a35', align:'top', font:{weight:'bold',size:10}, formatter:v=>v+'%'}}
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        scales:{
+          x:{stacked:true},
+          y:{stacked:true, beginAtZero:true, max: Math.max(...hitData.map((h,i)=>h+missData[i]))*1.2 || 1},
+          y1:{position:'right', min:0, max:100, grid:{drawOnChartArea:false}, ticks:{callback:v=>v+'%'}}
+        },
+        plugins:{legend:{position:'bottom'}}
+      }
+    });
+  }
+
+  buildChart('chartDOTDarat', weekGroups.Darat);
+  buildChart('chartDOTLaut', weekGroups.Laut);
+
+  // Tabel issue
+  const rows = [];
+  let grandTotal = 0;
+  ['Darat','Laut'].forEach(kat=>{
+    Object.values(issueGroups[kat]).forEach(v=>grandTotal+=v);
+  });
+  ['Darat','Laut'].forEach(kat=>{
+    const entries = Object.entries(issueGroups[kat]).sort((a,b)=>b[1]-a[1]);
+    entries.forEach(([iss,count],i)=>{
+      const pct = grandTotal ? Math.round(count/grandTotal*100) : 0;
+      rows.push(`<tr>
+        <td>${i===0?'<strong>'+kat+'</strong>':''}</td>
+        <td>${iss}</td>
+        <td>${count}</td>
+        <td>${pct}%</td>
+      </tr>`);
+    });
+  });
+  const grandMiss = Object.values(issueGroups.Darat).reduce((a,b)=>a+b,0) + Object.values(issueGroups.Laut).reduce((a,b)=>a+b,0);
+  rows.push(`<tr style="font-weight:700;background:var(--mist);">
+    <td colspan="2">Grand Total</td><td>${grandMiss}</td><td>100%</td>
+  </tr>`);
+
+  const tbody = document.getElementById('issueDaratLautBody');
+  tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada issue</td></tr>';
 }
 
 const PULAU_MAP = {
