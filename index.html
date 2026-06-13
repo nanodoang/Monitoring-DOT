@@ -177,7 +177,7 @@
     display:inline-block;
     padding-bottom:4px;
   }
-  .chart-wrap{position:relative;height:280px;}
+  .chart-wrap{position:relative;height:380px;}
 
   .filters{
     display:flex;
@@ -452,36 +452,68 @@
     </div>
 
 
-    <div class="kpi-row">
-      <div class="kpi">
-        <div class="label">Total Pengiriman</div>
-        <div class="value" id="kpiTotal">0</div>
-        <div class="sub" id="kpiBulan">-</div>
+    <div class="grid2">
+      <div class="card">
+        <h2>Monitoring ETA Kontainer (Sheet Terpisah)</h2>
+        <div class="sourcebar" style="padding:0;border:none;margin-bottom:14px;">
+          <input type="text" id="sheetUrl2" placeholder="Tempel link CSV publish 'Monitoring ETA Kontainer'..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSr5a-IuvbhOjfsbATYVtgSyQ5YVRGYK2nYgNC7yxhQwHnnsUbndjYVZ0HsQ00qcu8K-HEVVq_SLAyh/pub?gid=1331290254&single=true&output=csv">
+          <input type="text" id="skipRows2" placeholder="Skip baris" value="0" style="max-width:90px;flex:none;">
+          <button onclick="loadData2()">Muat Data</button>
+          <span class="status" id="lastSync2">Belum dimuat</span>
+        </div>
+        <div class="filters" id="eta2Filters" style="display:none;">
+          <select id="filterEta2Col"></select>
+          <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">dari
+            <input type="date" id="filterEta2From">
+          </label>
+          <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">s.d.
+            <input type="date" id="filterEta2To">
+          </label>
+        </div>
+        <div class="mapping-bar" id="eta2StatusMapping" style="display:none;">
+          <label>Kolom ETA <select id="eta2ColEta"></select></label>
+          <label>Kolom Aktual Sandar <select id="eta2ColAktual"></select></label>
+        </div>
+        <div class="table-scroll" id="eta2TableWrap" style="display:none;max-height:480px;">
+          <table>
+            <thead><tr id="eta2Head"></tr></thead>
+            <tbody id="eta2Body"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="kpi orange">
-        <div class="label">Belum Tiba (ATA Kosong)</div>
-        <div class="value" id="kpiPending">0</div>
-        <div class="sub">Container Num & Arrival Date</div>
+
+      <div class="card">
+        <h2>DOT per Ekspedisi</h2>
+        <div class="chart-wrap"><canvas id="chartDOTExped"></canvas></div>
+        <div class="table-scroll" style="margin-top:14px;max-height:300px;">
+          <table>
+            <thead><tr><th>Ekspedisi</th><th>Total</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
+            <tbody id="dotExpedBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="kpi green">
-        <div class="label">% HIT (On Time)</div>
-        <div class="value" id="kpiHitPctBig">0%</div>
-        <div class="sub" id="kpiHitSub">0 dari 0 yang sudah tiba</div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>DOT per Week</h2>
+        <div class="chart-wrap"><canvas id="chartDOTWeek"></canvas></div>
+        <div class="table-scroll" style="margin-top:14px;max-height:300px;">
+          <table>
+            <thead><tr><th>Week</th><th>Total</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
+            <tbody id="dotWeekBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="kpi green">
-        <div class="label">On Time (HIT)</div>
-        <div class="value" id="kpiHit">0</div>
-        <div class="sub" id="kpiHitPct">0% dari yang sudah tiba</div>
-      </div>
-      <div class="kpi red">
-        <div class="label">Delay (MISS)</div>
-        <div class="value" id="kpiMiss">0</div>
-        <div class="sub" id="kpiMissPct">0% dari yang sudah tiba</div>
-      </div>
-      <div class="kpi amber">
-        <div class="label">Rata-rata Lead Time</div>
-        <div class="value" id="kpiLead">-</div>
-        <div class="sub">hari (Ship date &rarr; Arrival Date)</div>
+      <div class="card">
+        <h2>DOT per Bulan</h2>
+        <div class="chart-wrap"><canvas id="chartDOTBulan"></canvas></div>
+        <div class="table-scroll" style="margin-top:14px;max-height:300px;">
+          <table>
+            <thead><tr><th>Bulan</th><th>Total</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
+            <tbody id="dotBulanBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -602,6 +634,39 @@
       </div>
     </div>
 
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="label">Total Pengiriman</div>
+        <div class="value" id="kpiTotal">0</div>
+        <div class="sub" id="kpiBulan">-</div>
+      </div>
+      <div class="kpi orange">
+        <div class="label">Belum Tiba (ATA Kosong)</div>
+        <div class="value" id="kpiPending">0</div>
+        <div class="sub">Container Num & Arrival Date</div>
+      </div>
+      <div class="kpi green">
+        <div class="label">% HIT (On Time)</div>
+        <div class="value" id="kpiHitPctBig">0%</div>
+        <div class="sub" id="kpiHitSub">0 dari 0 yang sudah tiba</div>
+      </div>
+      <div class="kpi green">
+        <div class="label">On Time (HIT)</div>
+        <div class="value" id="kpiHit">0</div>
+        <div class="sub" id="kpiHitPct">0% dari yang sudah tiba</div>
+      </div>
+      <div class="kpi red">
+        <div class="label">Delay (MISS)</div>
+        <div class="value" id="kpiMiss">0</div>
+        <div class="sub" id="kpiMissPct">0% dari yang sudah tiba</div>
+      </div>
+      <div class="kpi amber">
+        <div class="label">Rata-rata Lead Time</div>
+        <div class="value" id="kpiLead">-</div>
+        <div class="sub">hari (Ship date &rarr; Arrival Date)</div>
+      </div>
+    </div>
+
     <div class="card">
       <h2>Tabel Monitoring Kontainer</h2>
       <div class="table-scroll">
@@ -631,31 +696,6 @@
       </div>
     </div>
 
-  </div>
-
-  <div class="card" style="margin-top:22px;">
-    <h2>Monitoring ETA Kontainer (Sheet Terpisah)</h2>
-    <div class="sourcebar" style="padding:0;border:none;margin-bottom:14px;">
-      <input type="text" id="sheetUrl2" placeholder="Tempel link CSV publish 'Monitoring ETA Kontainer'..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSr5a-IuvbhOjfsbATYVtgSyQ5YVRGYK2nYgNC7yxhQwHnnsUbndjYVZ0HsQ00qcu8K-HEVVq_SLAyh/pub?gid=1331290254&single=true&output=csv">
-      <input type="text" id="skipRows2" placeholder="Skip baris" value="0" style="max-width:90px;flex:none;">
-      <button onclick="loadData2()">Muat Data</button>
-      <span class="status" id="lastSync2">Belum dimuat</span>
-    </div>
-    <div class="filters" id="eta2Filters" style="display:none;">
-      <select id="filterEta2Col"></select>
-      <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">dari
-        <input type="date" id="filterEta2From">
-      </label>
-      <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">s.d.
-        <input type="date" id="filterEta2To">
-      </label>
-    </div>
-    <div class="table-scroll" id="eta2TableWrap" style="display:none;">
-      <table>
-        <thead><tr id="eta2Head"></tr></thead>
-        <tbody id="eta2Body"></tbody>
-      </table>
-    </div>
   </div>
 
   </div><!-- /pageDOT -->
@@ -782,10 +822,22 @@
       <div class="card">
         <h2>HIT vs MISS (Datang vs Plan) per Week</h2>
         <div class="chart-wrap"><canvas id="chartArmadaWeek"></canvas></div>
+        <div class="table-scroll" style="margin-top:14px;max-height:300px;">
+          <table>
+            <thead><tr><th>Week</th><th>Plan (Total)</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
+            <tbody id="armadaWeekTableBody"></tbody>
+          </table>
+        </div>
       </div>
       <div class="card">
         <h2>HIT vs MISS per Bulan</h2>
         <div class="chart-wrap"><canvas id="chartArmadaHitBulan"></canvas></div>
+        <div class="table-scroll" style="margin-top:14px;max-height:300px;">
+          <table>
+            <thead><tr><th>Bulan</th><th>Plan (Total)</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
+            <tbody id="armadaBulanTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1173,6 +1225,118 @@ function renderAll(){
   renderCharts(data);
   renderGroupBy(data);
   renderDOTDaratLaut(data);
+  renderDOTExped(data);
+  renderDOTWeek(data);
+  renderDOTBulan(data);
+}
+
+function renderDOTExped(data){
+  const map = {};
+  data.forEach(r=>{
+    const e = (r['Expedition Id']||'Tidak diketahui').trim() || 'Tidak diketahui';
+    if(!map[e]) map[e] = {hit:0, miss:0};
+    if(r._status==='hit') map[e].hit++;
+    else if(r._status==='miss') map[e].miss++;
+  });
+  const labels = Object.keys(map).sort((a,b)=>(map[b].hit+map[b].miss)-(map[a].hit+map[a].miss));
+  destroyChart('dotExped');
+  charts.dotExped = new Chart(document.getElementById('chartDOTExped'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'Hit', data: labels.map(l=>map[l].hit), backgroundColor:'#3f8f5b'},
+      {label:'Miss', data: labels.map(l=>map[l].miss), backgroundColor:'#c1452f'}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+      plugins:{legend:{position:'bottom'},
+        datalabels:{color:'#1b2a35', font:{weight:'bold',size:9},
+          formatter:(v,ctx)=>{
+            if(!v) return '';
+            const l = ctx.chart.data.labels[ctx.dataIndex];
+            const t = map[l].hit+map[l].miss;
+            return v + (t? ' ('+Math.round(v/t*100)+'%)':'');
+          }}}}
+  });
+  document.getElementById('dotExpedBody').innerHTML = labels.map(l=>{
+    const g = map[l], total = g.hit+g.miss, pct = total? Math.round(g.hit/total*100):0;
+    return `<tr><td><strong>${l}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+}
+
+function renderDOTWeek(data){
+  const map = {};
+  data.forEach(r=>{
+    const dRef = r._eta || r._ship;
+    const wk = dRef ? 'Week ' + getWeekNum(dRef) : 'Tidak diketahui';
+    if(!map[wk]) map[wk] = {hit:0, miss:0};
+    if(r._status==='hit') map[wk].hit++;
+    else if(r._status==='miss') map[wk].miss++;
+  });
+  const labels = Object.keys(map).sort((a,b)=>{
+    const na = parseInt(a.replace('Week ',''))||999, nb = parseInt(b.replace('Week ',''))||999;
+    return na-nb;
+  });
+  destroyChart('dotWeek');
+  charts.dotWeek = new Chart(document.getElementById('chartDOTWeek'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'Hit', data: labels.map(l=>map[l].hit), backgroundColor:'#3f8f5b'},
+      {label:'Miss', data: labels.map(l=>map[l].miss), backgroundColor:'#c1452f'}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+      plugins:{legend:{position:'bottom'},
+        datalabels:{color:'#1b2a35', font:{weight:'bold',size:10},
+          formatter:(v,ctx)=>{
+            if(!v) return '';
+            const l = ctx.chart.data.labels[ctx.dataIndex];
+            const t = map[l].hit+map[l].miss;
+            return v + (t? ' ('+Math.round(v/t*100)+'%)':'');
+          }}}}
+  });
+  document.getElementById('dotWeekBody').innerHTML = labels.map(l=>{
+    const g = map[l], total = g.hit+g.miss, pct = total? Math.round(g.hit/total*100):0;
+    return `<tr><td><strong>${l}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+}
+
+function renderDOTBulan(data){
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const map = {};
+  data.forEach(r=>{
+    const b = (r['BULAN']||'-').trim() || '-';
+    if(!map[b]) map[b] = {hit:0, miss:0};
+    if(r._status==='hit') map[b].hit++;
+    else if(r._status==='miss') map[b].miss++;
+  });
+  const labels = Object.keys(map).sort((a,b)=>{
+    const ia=bulanOrder.indexOf(a), ib=bulanOrder.indexOf(b);
+    if(ia===-1&&ib===-1) return a.localeCompare(b);
+    if(ia===-1) return 1; if(ib===-1) return -1;
+    return ia-ib;
+  });
+  destroyChart('dotBulan');
+  charts.dotBulan = new Chart(document.getElementById('chartDOTBulan'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'Hit', data: labels.map(l=>map[l].hit), backgroundColor:'#3f8f5b'},
+      {label:'Miss', data: labels.map(l=>map[l].miss), backgroundColor:'#c1452f'}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+      plugins:{legend:{position:'bottom'},
+        datalabels:{color:'#1b2a35', font:{weight:'bold',size:10},
+          formatter:(v,ctx)=>{
+            if(!v) return '';
+            const l = ctx.chart.data.labels[ctx.dataIndex];
+            const t = map[l].hit+map[l].miss;
+            return v + (t? ' ('+Math.round(v/t*100)+'%)':'');
+          }}}}
+  });
+  document.getElementById('dotBulanBody').innerHTML = labels.map(l=>{
+    const g = map[l], total = g.hit+g.miss, pct = total? Math.round(g.hit/total*100):0;
+    return `<tr><td><strong>${l}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
 }
 
 function getDaratLaut(vehicleType){
@@ -1835,6 +1999,14 @@ function processCsvText2(text){
   colSel.innerHTML = '<option value="">Tanpa filter tanggal</option>' +
     eta2DateCols.map(h => `<option value="${h}">${h}</option>`).join('');
 
+  if(eta2DateCols.length >= 2){
+    fillMappingSelect('eta2ColEta', eta2DateCols, ['eta']);
+    fillMappingSelect('eta2ColAktual', eta2DateCols, ['sandar','aktual','tiba','actual']);
+    document.getElementById('eta2StatusMapping').style.display = 'flex';
+  } else {
+    document.getElementById('eta2StatusMapping').style.display = 'none';
+  }
+
   document.getElementById('lastSync2').textContent =
     'Tersambung — ' + rawData2.length + ' baris · update ' + new Date().toLocaleTimeString('id-ID');
   document.getElementById('eta2Filters').style.display = 'flex';
@@ -1846,7 +2018,12 @@ function processCsvText2(text){
 function renderEta2Table(){
   const head = document.getElementById('eta2Head');
   const body = document.getElementById('eta2Body');
-  head.innerHTML = eta2Headers.map(h=>`<th>${h}</th>`).join('');
+
+  const colEta = document.getElementById('eta2ColEta') ? document.getElementById('eta2ColEta').value : '';
+  const colAktual = document.getElementById('eta2ColAktual') ? document.getElementById('eta2ColAktual').value : '';
+  const showStatus = colEta && colAktual && colEta !== colAktual;
+
+  head.innerHTML = eta2Headers.map(h=>`<th>${h}</th>`).join('') + (showStatus ? '<th>Status Sandar vs ETA</th><th>Selisih (hari)</th>' : '');
 
   const colName = document.getElementById('filterEta2Col').value;
   const from = document.getElementById('filterEta2From').value;
@@ -1866,14 +2043,34 @@ function renderEta2Table(){
   }
 
   if(filtered.length === 0){
-    body.innerHTML = `<tr><td colspan="${eta2Headers.length}" style="text-align:center;color:var(--muted);padding:20px;">Tidak ada data sesuai filter</td></tr>`;
+    body.innerHTML = `<tr><td colspan="${eta2Headers.length + (showStatus?2:0)}" style="text-align:center;color:var(--muted);padding:20px;">Tidak ada data sesuai filter</td></tr>`;
     return;
   }
 
   body.innerHTML = filtered.slice(0,1000).map(r=>{
-    return '<tr>' + eta2Headers.map(h=>`<td>${r[h] || '-'}</td>`).join('') + '</tr>';
+    let extra = '';
+    if(showStatus){
+      const dEta = r['_date_'+colEta];
+      const dAktual = r['_date_'+colAktual];
+      if(!dAktual){
+        extra = '<td><span class="badge pending">Belum Sandar</span></td><td>-</td>';
+      } else if(!dEta){
+        extra = '<td><span class="badge unknown">Tanpa ETA</span></td><td>-</td>';
+      } else {
+        const diff = diffDays(dEta, dAktual);
+        const badge = diff > 0 ? 'miss' : 'hit';
+        const label = diff > 0 ? 'Telat dari ETA' : (diff < 0 ? 'Lebih Cepat' : 'Sesuai ETA');
+        extra = `<td><span class="badge ${badge}">${label}</span></td><td>${diff}</td>`;
+      }
+    }
+    return '<tr>' + eta2Headers.map(h=>`<td>${r[h] || '-'}</td>`).join('') + extra + '</tr>';
   }).join('');
 }
+
+['eta2ColEta','eta2ColAktual'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{ if(rawData2.length) renderEta2Table(); });
+});
+
 
 ['filterEta2Col','filterEta2From','filterEta2To'].forEach(id=>{
   document.getElementById(id).addEventListener('change', ()=>{ if(rawData2.length) renderEta2Table(); });
@@ -2124,6 +2321,13 @@ function renderArmada(){
       plugins:{legend:{position:'bottom'}, datalabels:{color:'#1b2a35', font:{weight:'bold',size:9}, formatter:v=>v||''}}}
   });
 
+  document.getElementById('armadaWeekTableBody').innerHTML = weekLabels.map(w=>{
+    const g = weekMap[w];
+    const total = g.hit + g.miss;
+    const pct = total ? Math.round(g.hit/total*100) : 0;
+    return `<tr><td><strong>${w}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+
   const hmBulanLabels = Object.keys(bulanHitMap).sort((a,b)=>{
     const ia=bulanOrder.indexOf(a), ib=bulanOrder.indexOf(b);
     if(ia===-1&&ib===-1) return a.localeCompare(b);
@@ -2152,6 +2356,13 @@ function renderArmada(){
         }
       }}
   });
+
+  document.getElementById('armadaBulanTableBody').innerHTML = hmBulanLabels.map(b=>{
+    const g = bulanHitMap[b];
+    const total = g.hit + g.miss;
+    const pct = total ? Math.round(g.hit/total*100) : 0;
+    return `<tr><td><strong>${b}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
 
   const expedLabels = Object.keys(expedTotalMap).sort((a,b)=>(expedMissMap[b]||0)-(expedMissMap[a]||0));
   destroyChart('armadaExped');
