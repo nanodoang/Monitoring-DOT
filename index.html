@@ -429,6 +429,14 @@
         <div class="pill-label">Week</div>
         <div class="pill active" data-value="">Semua</div>
       </div>
+      <div class="pill-group" id="pillQuartal">
+        <div class="pill-label">Quartal</div>
+        <div class="pill active" data-value="">Semua</div>
+        <div class="pill" data-value="Q1">Q1 (Jan-Mar)</div>
+        <div class="pill" data-value="Q2">Q2 (Apr-Jun)</div>
+        <div class="pill" data-value="Q3">Q3 (Jul-Sep)</div>
+        <div class="pill" data-value="Q4">Q4 (Okt-Des)</div>
+      </div>
 
       <div class="filters" style="margin-bottom:0;">
         <input type="text" id="searchBox" placeholder="Cari: container, nopol, packing slip, delivery name...">
@@ -453,13 +461,23 @@
 
 
     <div class="grid2">
-      <div class="card" style="grid-column:1 / -1;">
-        <h2>DOT per Ekspedisi</h2>
-        <div class="chart-wrap"><canvas id="chartDOTExped"></canvas></div>
+      <div class="card">
+        <h2>DOT per Ekspedisi — Darat</h2>
+        <div class="chart-wrap"><canvas id="chartDOTExpedDarat"></canvas></div>
         <div class="table-scroll" style="margin-top:14px;max-height:300px;">
           <table>
             <thead><tr><th>Ekspedisi</th><th>Total</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
-            <tbody id="dotExpedBody"></tbody>
+            <tbody id="dotExpedDaratBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h2>DOT per Ekspedisi — Laut</h2>
+        <div class="chart-wrap"><canvas id="chartDOTExpedLaut"></canvas></div>
+        <div class="table-scroll" style="margin-top:14px;max-height:300px;">
+          <table>
+            <thead><tr><th>Ekspedisi</th><th>Total</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
+            <tbody id="dotExpedLautBody"></tbody>
           </table>
         </div>
       </div>
@@ -683,11 +701,25 @@
       <div class="mapping-bar" id="armadaMapping" style="display:none;">
         <label>Kolom Bulan <select id="armadaColBulan"></select></label>
         <label>Kolom Kategori (Ekspedisi) <select id="armadaColKategori"></select></label>
+        <label>Kolom Jenis Armada (Darat/Laut) <select id="armadaColJenis"></select></label>
         <label>Kolom Request Unit <select id="armadaColRequest"></select></label>
         <label>Kolom Realisasi Unit <select id="armadaColRealisasi"></select></label>
         <label>Kolom Tanggal Plan <select id="armadaColPlan"></select></label>
         <label>Kolom Tanggal Datang Pabrik <select id="armadaColDatang"></select></label>
         <button onclick="renderArmada()">Terapkan</button>
+      </div>
+
+      <div class="pill-group" id="pillArmadaBulan" style="display:none;">
+        <div class="pill-label">Bulan</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+      <div class="pill-group" id="pillArmadaWeek" style="display:none;">
+        <div class="pill-label">Week</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+      <div class="pill-group" id="pillArmadaExped" style="display:none;">
+        <div class="pill-label">Ekspedisi</div>
+        <div class="pill active" data-value="">Semua</div>
       </div>
     </div>
 
@@ -791,31 +823,58 @@
 
     <div class="grid2" id="armadaHitMissCharts" style="display:none;">
       <div class="card">
-        <h2>HIT vs MISS (Datang vs Plan) per Week</h2>
-        <div class="chart-wrap"><canvas id="chartArmadaWeek"></canvas></div>
+        <h2>HIT vs MISS per Week — Darat</h2>
+        <div class="chart-wrap"><canvas id="chartArmadaWeekDarat"></canvas></div>
         <div class="table-scroll" style="margin-top:14px;max-height:300px;">
           <table>
             <thead><tr><th>Week</th><th>Plan (Total)</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
-            <tbody id="armadaWeekTableBody"></tbody>
+            <tbody id="armadaWeekDaratBody"></tbody>
           </table>
         </div>
       </div>
       <div class="card">
-        <h2>HIT vs MISS per Bulan</h2>
-        <div class="chart-wrap"><canvas id="chartArmadaHitBulan"></canvas></div>
+        <h2>HIT vs MISS per Week — Laut</h2>
+        <div class="chart-wrap"><canvas id="chartArmadaWeekLaut"></canvas></div>
+        <div class="table-scroll" style="margin-top:14px;max-height:300px;">
+          <table>
+            <thead><tr><th>Week</th><th>Plan (Total)</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
+            <tbody id="armadaWeekLautBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2" id="armadaHitMissChartsBulan" style="display:none;">
+      <div class="card">
+        <h2>HIT vs MISS per Bulan — Darat</h2>
+        <div class="chart-wrap"><canvas id="chartArmadaBulanDarat"></canvas></div>
         <div class="table-scroll" style="margin-top:14px;max-height:300px;">
           <table>
             <thead><tr><th>Bulan</th><th>Plan (Total)</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
-            <tbody id="armadaBulanTableBody"></tbody>
+            <tbody id="armadaBulanDaratBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h2>HIT vs MISS per Bulan — Laut</h2>
+        <div class="chart-wrap"><canvas id="chartArmadaBulanLaut"></canvas></div>
+        <div class="table-scroll" style="margin-top:14px;max-height:300px;">
+          <table>
+            <thead><tr><th>Bulan</th><th>Plan (Total)</th><th>Hit</th><th>Miss</th><th>% Hit</th></tr></thead>
+            <tbody id="armadaBulanLautBody"></tbody>
           </table>
         </div>
       </div>
     </div>
 
     <div class="grid2" id="armadaExpedCharts" style="display:none;">
-      <div class="card" style="grid-column:1 / -1;">
-        <h2>Kontribusi MISS per Ekspedisi</h2>
-        <div class="chart-wrap"><canvas id="chartArmadaExped"></canvas></div>
+      <div class="card">
+        <h2>Kontribusi MISS per Ekspedisi — Darat</h2>
+        <div class="chart-wrap"><canvas id="chartArmadaExpedDarat"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Kontribusi MISS per Ekspedisi — Laut</h2>
+        <div class="chart-wrap"><canvas id="chartArmadaExpedLaut"></canvas></div>
       </div>
     </div>
 
@@ -1134,6 +1193,19 @@ function populateFilters(){
   fillPills('pillBulan', [...bulan].sort());
   fillPills('pillExpedisi', [...exped].sort());
   fillPills('pillWeek', [...week].sort((a,b)=>(parseFloat(a)||0)-(parseFloat(b)||0)));
+
+  // pillQuartal sudah statis di HTML, tinggal attach listener (sekali saja)
+  const pq = document.getElementById('pillQuartal');
+  if(!pq.dataset.bound){
+    pq.querySelectorAll('.pill').forEach(pill=>{
+      pill.addEventListener('click', ()=>{
+        pq.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+        pill.classList.add('active');
+        if(rawData.length) renderAll();
+      });
+    });
+    pq.dataset.bound = '1';
+  }
 }
 
 function fillPills(containerId, values){
@@ -1160,7 +1232,11 @@ function fillPills(containerId, values){
     pill.addEventListener('click', ()=>{
       container.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
       pill.classList.add('active');
-      if(rawData.length) renderAll();
+      if(containerId.startsWith('pillArmada')){
+        if(armadaData.length) renderArmada();
+      } else {
+        if(rawData.length) renderAll();
+      }
     });
   });
 }
@@ -1191,14 +1267,23 @@ function getFiltered(){
   const issue = document.getElementById('filterIssue').value;
   const expedPill = getPillValue('pillExpedisi');
   const weekPill = getPillValue('pillWeek');
+  const quartalPill = getPillValue('pillQuartal');
   const etaFrom = document.getElementById('filterEtaFrom').value;
   const etaTo = document.getElementById('filterEtaTo').value;
+
+  const BULAN_TO_Q = {
+    'Januari':'Q1','Februari':'Q1','Maret':'Q1',
+    'April':'Q2','Mei':'Q2','Juni':'Q2',
+    'Juli':'Q3','Agustus':'Q3','September':'Q3',
+    'Oktober':'Q4','November':'Q4','Desember':'Q4'
+  };
 
   return rawData.filter(r=>{
     if(status && r._status !== status) return false;
     if(exped && (r['Expedition Id']||'').trim() !== exped) return false;
     if(expedPill && (r['Expedition Id']||'').trim() !== expedPill) return false;
     if(weekPill && (r['WEEK']||'').toString().trim() !== weekPill) return false;
+    if(quartalPill && BULAN_TO_Q[(r['BULAN']||'').trim()] !== quartalPill) return false;
     if(region && (r['Region']||'').trim() !== region) return false;
     if(bulan && (r['BULAN']||'').trim() !== bulan) return false;
     if(issue && (r['ISSUE']||'').trim() !== issue) return false;
@@ -1233,36 +1318,43 @@ function renderAll(){
 }
 
 function renderDOTExped(data){
-  const map = {};
+  const groups = { Darat:{}, Laut:{} };
   data.forEach(r=>{
+    const kat = getDaratLaut(r['Vehicle Type']);
     const e = (r['Expedition Id']||'Tidak diketahui').trim() || 'Tidak diketahui';
-    if(!map[e]) map[e] = {hit:0, miss:0};
-    if(r._status==='hit') map[e].hit++;
-    else if(r._status==='miss') map[e].miss++;
+    if(!groups[kat][e]) groups[kat][e] = {hit:0, miss:0};
+    if(r._status==='hit') groups[kat][e].hit++;
+    else if(r._status==='miss') groups[kat][e].miss++;
   });
-  const labels = Object.keys(map).sort((a,b)=>(map[b].hit+map[b].miss)-(map[a].hit+map[a].miss));
-  destroyChart('dotExped');
-  charts.dotExped = new Chart(document.getElementById('chartDOTExped'), {
-    type:'bar',
-    data:{ labels, datasets:[
-      {label:'Hit', data: labels.map(l=>map[l].hit), backgroundColor:'#3f8f5b'},
-      {label:'Miss', data: labels.map(l=>map[l].miss), backgroundColor:'#c1452f'}
-    ]},
-    options:{responsive:true, maintainAspectRatio:false,
-      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
-      plugins:{legend:{position:'bottom'},
-        datalabels:{color:'#1b2a35', font:{weight:'bold',size:9},
-          formatter:(v,ctx)=>{
-            if(!v) return '';
-            const l = ctx.chart.data.labels[ctx.dataIndex];
-            const t = map[l].hit+map[l].miss;
-            return v + (t? ' ('+Math.round(v/t*100)+'%)':'');
-          }}}}
-  });
-  document.getElementById('dotExpedBody').innerHTML = labels.map(l=>{
-    const g = map[l], total = g.hit+g.miss, pct = total? Math.round(g.hit/total*100):0;
-    return `<tr><td><strong>${l}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
-  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+
+  function build(canvasId, tbodyId, map){
+    const labels = Object.keys(map).sort((a,b)=>(map[b].hit+map[b].miss)-(map[a].hit+map[a].miss));
+    destroyChart(canvasId);
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      type:'bar',
+      data:{ labels, datasets:[
+        {label:'Hit', data: labels.map(l=>map[l].hit), backgroundColor:'#3f8f5b'},
+        {label:'Miss', data: labels.map(l=>map[l].miss), backgroundColor:'#c1452f'}
+      ]},
+      options:{responsive:true, maintainAspectRatio:false,
+        scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+        plugins:{legend:{position:'bottom'},
+          datalabels:{color:'#1b2a35', font:{weight:'bold',size:9},
+            formatter:(v,ctx)=>{
+              if(!v) return '';
+              const l = ctx.chart.data.labels[ctx.dataIndex];
+              const t = map[l].hit+map[l].miss;
+              return v + (t? ' ('+Math.round(v/t*100)+'%)':'');
+            }}}}
+    });
+    document.getElementById(tbodyId).innerHTML = labels.map(l=>{
+      const g = map[l], total = g.hit+g.miss, pct = total? Math.round(g.hit/total*100):0;
+      return `<tr><td><strong>${l}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+  }
+
+  build('chartDOTExpedDarat', 'dotExpedDaratBody', groups.Darat);
+  build('chartDOTExpedLaut', 'dotExpedLautBody', groups.Laut);
 }
 
 function renderDOTWeek(data){
@@ -2180,6 +2272,7 @@ function loadArmada(){
       fillMappingSelect('armadaColKategori', fields, ['expedition','ekspedisi','region','vehicle','kategori']);
       fillMappingSelect('armadaColRequest', fields, ['request','rencana','plan']);
       fillMappingSelect('armadaColRealisasi', fields, ['realisasi','actual','real']);
+      fillMappingSelect('armadaColJenis', fields, ['jenis','vehicle','armada','tipe']);
       fillMappingSelect('armadaColPlan', fields, ['plan','rencana']);
       fillMappingSelect('armadaColDatang', fields, ['datang','arrival','tiba']);
       renderArmada();
@@ -2188,8 +2281,73 @@ function loadArmada(){
   );
 }
 
+function populateArmadaFilters(){
+  const colBulan = document.getElementById('armadaColBulan').value;
+  const colKat = document.getElementById('armadaColKategori').value;
+  const colPlan = document.getElementById('armadaColPlan').value;
+
+  const prevBulan = getPillValue('pillArmadaBulan');
+  const prevExped = getPillValue('pillArmadaExped');
+  const prevWeek = getPillValue('pillArmadaWeek');
+
+  const bulanSet = new Set(), expedSet = new Set(), weekSet = new Set();
+  armadaData.forEach(r=>{
+    const bln = (r[colBulan]||'').toString().trim();
+    if(bln) bulanSet.add(bln);
+    const kat = (r[colKat]||'').toString().trim();
+    if(kat) expedSet.add(kat);
+    if(colPlan){
+      const d = parseDate(r[colPlan]);
+      if(d) weekSet.add('W' + getWeekNum(d) + ' (' + d.getFullYear() + ')');
+    }
+  });
+
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  fillPills('pillArmadaBulan', [...bulanSet].sort((a,b)=>bulanOrder.indexOf(a)-bulanOrder.indexOf(b)));
+  fillPills('pillArmadaExped', [...expedSet].sort());
+  fillPills('pillArmadaWeek', [...weekSet].sort((a,b)=>{
+    const na=a.match(/W(\d+) \((\d+)\)/), nb=b.match(/W(\d+) \((\d+)\)/);
+    if(na[2]!==nb[2]) return na[2]-nb[2];
+    return na[1]-nb[1];
+  }));
+
+  // restore selection jika masih valid
+  [['pillArmadaBulan',prevBulan,bulanSet],['pillArmadaExped',prevExped,expedSet],['pillArmadaWeek',prevWeek,weekSet]].forEach(([cid,prev,set])=>{
+    if(prev && set.has(prev)){
+      const c = document.getElementById(cid);
+      c.querySelectorAll('.pill').forEach(p=>p.classList.toggle('active', p.dataset.value===prev));
+    }
+  });
+
+  document.getElementById('pillArmadaBulan').style.display = bulanSet.size ? '' : 'none';
+  document.getElementById('pillArmadaExped').style.display = expedSet.size ? '' : 'none';
+  document.getElementById('pillArmadaWeek').style.display = weekSet.size ? '' : 'none';
+}
+
+function getFilteredArmada(){
+  const colBulan = document.getElementById('armadaColBulan').value;
+  const colKat = document.getElementById('armadaColKategori').value;
+  const colPlan = document.getElementById('armadaColPlan').value;
+  const bulanPill = getPillValue('pillArmadaBulan');
+  const expedPill = getPillValue('pillArmadaExped');
+  const weekPill = getPillValue('pillArmadaWeek');
+
+  return armadaData.filter(r=>{
+    if(bulanPill && (r[colBulan]||'').toString().trim() !== bulanPill) return false;
+    if(expedPill && (r[colKat]||'').toString().trim() !== expedPill) return false;
+    if(weekPill && colPlan){
+      const d = parseDate(r[colPlan]);
+      const wk = d ? 'W' + getWeekNum(d) + ' (' + d.getFullYear() + ')' : '';
+      if(wk !== weekPill) return false;
+    }
+    return true;
+  });
+}
+
 function renderArmada(){
   if(!armadaData.length) return;
+  populateArmadaFilters();
+  const armadaDataFiltered = getFilteredArmada();
   const colBulan = document.getElementById('armadaColBulan').value;
   const colKat = document.getElementById('armadaColKategori').value;
   const colReq = document.getElementById('armadaColRequest').value;
@@ -2197,7 +2355,7 @@ function renderArmada(){
 
   let totalReq = 0, totalReal = 0;
   const byKat = {}, byBulan = {};
-  armadaData.forEach(r=>{
+  armadaDataFiltered.forEach(r=>{
     const req = toNumber(r[colReq]);
     const real = toNumber(r[colReal]);
     totalReq += req; totalReal += real;
@@ -2257,44 +2415,44 @@ function renderArmada(){
   const head = document.getElementById('armadaHead');
   const body = document.getElementById('armadaBody');
   head.innerHTML = armadaFields.map(f=>`<th>${f}</th>`).join('');
-  body.innerHTML = armadaData.slice(0,1000).map(r=>'<tr>'+armadaFields.map(f=>`<td>${r[f]||'-'}</td>`).join('')+'</tr>').join('');
+  body.innerHTML = armadaDataFiltered.slice(0,1000).map(r=>'<tr>'+armadaFields.map(f=>`<td>${r[f]||'-'}</td>`).join('')+'</tr>').join('');
 
-  /* ===== HIT/MISS: Datang Pabrik vs Plan ===== */
+  /* ===== HIT/MISS: Datang Pabrik vs Plan (split Darat/Laut) ===== */
   const colPlan = document.getElementById('armadaColPlan').value;
   const colDatang = document.getElementById('armadaColDatang').value;
+  const colJenis = document.getElementById('armadaColJenis').value;
   if(!colPlan || !colDatang || colPlan===colDatang){
     document.getElementById('armadaKpiRow2').style.display = 'none';
     document.getElementById('armadaHitMissCharts').style.display = 'none';
+    document.getElementById('armadaHitMissChartsBulan').style.display = 'none';
     document.getElementById('armadaExpedCharts').style.display = 'none';
     return;
   }
 
-  function getWeekNumber(d){
-    const onejan = new Date(d.getFullYear(),0,1);
-    return Math.ceil((((d - onejan) / 86400000) + onejan.getDay()+1)/7);
-  }
-
   let hitCount=0, missCount=0;
-  const weekMap = {}, bulanHitMap = {}, expedMissMap = {}, expedTotalMap = {};
+  const weekMap = { Darat:{}, Laut:{} }, bulanHitMap = { Darat:{}, Laut:{} };
+  const expedMissMap = { Darat:{}, Laut:{} }, expedTotalMap = { Darat:{}, Laut:{} };
 
-  armadaData.forEach(r=>{
+  armadaDataFiltered.forEach(r=>{
     const dPlan = parseDate(r[colPlan]);
     const dDatang = parseDate(r[colDatang]);
     if(!dPlan || !dDatang) return;
     const isHit = dDatang <= dPlan;
     if(isHit) hitCount++; else missCount++;
 
-    const wk = 'W' + getWeekNumber(dPlan) + ' (' + dPlan.getFullYear() + ')';
-    if(!weekMap[wk]) weekMap[wk] = {hit:0, miss:0};
-    weekMap[wk][isHit?'hit':'miss']++;
+    const kat = colJenis ? getDaratLaut(r[colJenis]) : 'Darat';
+
+    const wk = 'W' + getWeekNum(dPlan) + ' (' + dPlan.getFullYear() + ')';
+    if(!weekMap[kat][wk]) weekMap[kat][wk] = {hit:0, miss:0};
+    weekMap[kat][wk][isHit?'hit':'miss']++;
 
     const bln = (r[colBulan]||'-').toString().trim() || '-';
-    if(!bulanHitMap[bln]) bulanHitMap[bln] = {hit:0, miss:0};
-    bulanHitMap[bln][isHit?'hit':'miss']++;
+    if(!bulanHitMap[kat][bln]) bulanHitMap[kat][bln] = {hit:0, miss:0};
+    bulanHitMap[kat][bln][isHit?'hit':'miss']++;
 
     const exp = (r[colKat]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
-    expedTotalMap[exp] = (expedTotalMap[exp]||0) + 1;
-    if(!isHit) expedMissMap[exp] = (expedMissMap[exp]||0) + 1;
+    expedTotalMap[kat][exp] = (expedTotalMap[kat][exp]||0) + 1;
+    if(!isHit) expedMissMap[kat][exp] = (expedMissMap[kat][exp]||0) + 1;
   });
 
   const totalHM = hitCount + missCount;
@@ -2304,93 +2462,100 @@ function renderArmada(){
   document.getElementById('armadaKpiMissPct').textContent = (totalHM? Math.round(missCount/totalHM*100):0) + '%';
   document.getElementById('armadaKpiRow2').style.display = '';
   document.getElementById('armadaHitMissCharts').style.display = '';
+  document.getElementById('armadaHitMissChartsBulan').style.display = '';
   document.getElementById('armadaExpedCharts').style.display = '';
 
-  const weekLabels = Object.keys(weekMap).sort((a,b)=>{
-    const na = a.match(/W(\d+) \((\d+)\)/), nb = b.match(/W(\d+) \((\d+)\)/);
-    if(na[2]!==nb[2]) return na[2]-nb[2];
-    return na[1]-nb[1];
-  });
-  destroyChart('armadaWeek');
-  charts.armadaWeek = new Chart(document.getElementById('chartArmadaWeek'), {
-    type:'bar',
-    data:{ labels: weekLabels, datasets:[
-      {label:'HIT', data: weekLabels.map(w=>weekMap[w].hit), backgroundColor:'#3f8f5b'},
-      {label:'MISS', data: weekLabels.map(w=>weekMap[w].miss), backgroundColor:'#c1452f'}
-    ]},
-    options:{responsive:true, maintainAspectRatio:false,
-      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
-      plugins:{legend:{position:'bottom'}, datalabels:{color:'#1b2a35', font:{weight:'bold',size:9}, formatter:v=>v||''}}}
-  });
+  function buildWeekChart(canvasId, tbodyId, map){
+    const labels = Object.keys(map).sort((a,b)=>{
+      const na = a.match(/W(\d+) \((\d+)\)/), nb = b.match(/W(\d+) \((\d+)\)/);
+      if(na[2]!==nb[2]) return na[2]-nb[2];
+      return na[1]-nb[1];
+    });
+    destroyChart(canvasId);
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      type:'bar',
+      data:{ labels, datasets:[
+        {label:'HIT', data: labels.map(w=>map[w].hit), backgroundColor:'#3f8f5b'},
+        {label:'MISS', data: labels.map(w=>map[w].miss), backgroundColor:'#c1452f'}
+      ]},
+      options:{responsive:true, maintainAspectRatio:false,
+        scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+        plugins:{legend:{position:'bottom'}, datalabels:{color:'#1b2a35', font:{weight:'bold',size:9}, formatter:v=>v||''}}}
+    });
+    document.getElementById(tbodyId).innerHTML = labels.map(w=>{
+      const g = map[w], total = g.hit+g.miss, pct = total? Math.round(g.hit/total*100):0;
+      return `<tr><td><strong>${w}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+  }
+  buildWeekChart('chartArmadaWeekDarat', 'armadaWeekDaratBody', weekMap.Darat);
+  buildWeekChart('chartArmadaWeekLaut', 'armadaWeekLautBody', weekMap.Laut);
 
-  document.getElementById('armadaWeekTableBody').innerHTML = weekLabels.map(w=>{
-    const g = weekMap[w];
-    const total = g.hit + g.miss;
-    const pct = total ? Math.round(g.hit/total*100) : 0;
-    return `<tr><td><strong>${w}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
-  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
-
-  const hmBulanLabels = Object.keys(bulanHitMap).sort((a,b)=>{
-    const ia=bulanOrder.indexOf(a), ib=bulanOrder.indexOf(b);
-    if(ia===-1&&ib===-1) return a.localeCompare(b);
-    if(ia===-1) return 1; if(ib===-1) return -1;
-    return ia-ib;
-  });
-  destroyChart('armadaHitBulan');
-  charts.armadaHitBulan = new Chart(document.getElementById('chartArmadaHitBulan'), {
-    type:'bar',
-    data:{ labels: hmBulanLabels, datasets:[
-      {label:'HIT', data: hmBulanLabels.map(b=>bulanHitMap[b].hit), backgroundColor:'#3f8f5b'},
-      {label:'MISS', data: hmBulanLabels.map(b=>bulanHitMap[b].miss), backgroundColor:'#c1452f'}
-    ]},
-    options:{responsive:true, maintainAspectRatio:false,
-      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
-      plugins:{legend:{position:'bottom'},
-        datalabels:{
-          color:'#1b2a35', font:{weight:'bold',size:10},
-          formatter:(value,ctx)=>{
-            if(!value) return '';
-            const b = ctx.chart.data.labels[ctx.dataIndex];
-            const total = bulanHitMap[b].hit + bulanHitMap[b].miss;
-            const pct = total ? Math.round(value/total*100) : 0;
-            return value + ' (' + pct + '%)';
-          }
-        }
-      }}
-  });
-
-  document.getElementById('armadaBulanTableBody').innerHTML = hmBulanLabels.map(b=>{
-    const g = bulanHitMap[b];
-    const total = g.hit + g.miss;
-    const pct = total ? Math.round(g.hit/total*100) : 0;
-    return `<tr><td><strong>${b}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
-  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
-
-  const expedLabels = Object.keys(expedTotalMap).sort((a,b)=>(expedMissMap[b]||0)-(expedMissMap[a]||0));
-  destroyChart('armadaExped');
-  charts.armadaExped = new Chart(document.getElementById('chartArmadaExped'), {
-    type:'bar',
-    data:{ labels: expedLabels, datasets:[
-      {label:'Total Pengiriman', data: expedLabels.map(e=>expedTotalMap[e]), backgroundColor:'#9fb3c0'},
-      {label:'MISS', data: expedLabels.map(e=>expedMissMap[e]||0), backgroundColor:'#c1452f'}
-    ]},
-    options:{responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom'},
-        datalabels:{
-          color:'#1b2a35', font:{weight:'bold',size:9},
-          formatter:(value,ctx)=>{
-            if(!value) return '';
-            if(ctx.datasetIndex===1){
-              const e = ctx.chart.data.labels[ctx.dataIndex];
-              const total = expedTotalMap[e];
+  function buildBulanChart(canvasId, tbodyId, map){
+    const labels = Object.keys(map).sort((a,b)=>{
+      const ia=bulanOrder.indexOf(a), ib=bulanOrder.indexOf(b);
+      if(ia===-1&&ib===-1) return a.localeCompare(b);
+      if(ia===-1) return 1; if(ib===-1) return -1;
+      return ia-ib;
+    });
+    destroyChart(canvasId);
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      type:'bar',
+      data:{ labels, datasets:[
+        {label:'HIT', data: labels.map(b=>map[b].hit), backgroundColor:'#3f8f5b'},
+        {label:'MISS', data: labels.map(b=>map[b].miss), backgroundColor:'#c1452f'}
+      ]},
+      options:{responsive:true, maintainAspectRatio:false,
+        scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+        plugins:{legend:{position:'bottom'},
+          datalabels:{
+            color:'#1b2a35', font:{weight:'bold',size:10},
+            formatter:(value,ctx)=>{
+              if(!value) return '';
+              const b = ctx.chart.data.labels[ctx.dataIndex];
+              const total = map[b].hit + map[b].miss;
               const pct = total ? Math.round(value/total*100) : 0;
               return value + ' (' + pct + '%)';
             }
-            return value;
           }
-        }
-      }}
-  });
+        }}
+    });
+    document.getElementById(tbodyId).innerHTML = labels.map(b=>{
+      const g = map[b], total = g.hit+g.miss, pct = total? Math.round(g.hit/total*100):0;
+      return `<tr><td><strong>${b}</strong></td><td>${total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${g.miss}</span></td><td>${pct}%</td></tr>`;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+  }
+  buildBulanChart('chartArmadaBulanDarat', 'armadaBulanDaratBody', bulanHitMap.Darat);
+  buildBulanChart('chartArmadaBulanLaut', 'armadaBulanLautBody', bulanHitMap.Laut);
+
+  function buildExpedChart(canvasId, totalMap, missMap){
+    const labels = Object.keys(totalMap).sort((a,b)=>(missMap[b]||0)-(missMap[a]||0));
+    destroyChart(canvasId);
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      type:'bar',
+      data:{ labels, datasets:[
+        {label:'Total Pengiriman', data: labels.map(e=>totalMap[e]), backgroundColor:'#9fb3c0'},
+        {label:'MISS', data: labels.map(e=>missMap[e]||0), backgroundColor:'#c1452f'}
+      ]},
+      options:{responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom'},
+          datalabels:{
+            color:'#1b2a35', font:{weight:'bold',size:9},
+            formatter:(value,ctx)=>{
+              if(!value) return '';
+              if(ctx.datasetIndex===1){
+                const e = ctx.chart.data.labels[ctx.dataIndex];
+                const total = totalMap[e];
+                const pct = total ? Math.round(value/total*100) : 0;
+                return value + ' (' + pct + '%)';
+              }
+              return value;
+            }
+          }
+        }}
+    });
+  }
+  buildExpedChart('chartArmadaExpedDarat', expedTotalMap.Darat, expedMissMap.Darat);
+  buildExpedChart('chartArmadaExpedLaut', expedTotalMap.Laut, expedMissMap.Laut);
 }
 
 /* ===================== TRANSPORT COST ===================== */
