@@ -723,6 +723,66 @@
       </div>
     </div>
 
+    <div class="card" id="armadaAGCard" style="display:none;">
+      <h2>Pemenuhan Armada (HIT = Kolom AG bernilai 1)</h2>
+      <div class="pill-group" id="pillArmadaAGExped">
+        <div class="pill-label">Ekspedisi</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+      <div class="pill-group" id="pillArmadaAGBulan">
+        <div class="pill-label">Bulan</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+      <div class="pill-group" id="pillArmadaAGWeek">
+        <div class="pill-label">Week</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+      <div class="pill-group" id="pillArmadaAGQuartal">
+        <div class="pill-label">Quartal</div>
+        <div class="pill active" data-value="">Semua</div>
+        <div class="pill" data-value="Q1">Q1 (Jan-Mar)</div>
+        <div class="pill" data-value="Q2">Q2 (Apr-Jun)</div>
+        <div class="pill" data-value="Q3">Q3 (Jul-Sep)</div>
+        <div class="pill" data-value="Q4">Q4 (Okt-Des)</div>
+      </div>
+
+      <div class="kpi-row" style="margin:14px 0;">
+        <div class="kpi">
+          <div class="label">Total</div>
+          <div class="value" id="armadaAGKpiTotal">0</div>
+        </div>
+        <div class="kpi green">
+          <div class="label">HIT (AG = 1)</div>
+          <div class="value" id="armadaAGKpiHit">0</div>
+        </div>
+        <div class="kpi red">
+          <div class="label">MISS</div>
+          <div class="value" id="armadaAGKpiMiss">0</div>
+        </div>
+        <div class="kpi amber">
+          <div class="label">% HIT</div>
+          <div class="value" id="armadaAGKpiPct">0%</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>HIT vs MISS per Bulan</h2>
+          <div class="chart-wrap"><canvas id="chartArmadaAGBulan"></canvas></div>
+        </div>
+        <div class="card">
+          <h2>HIT vs MISS per Ekspedisi</h2>
+          <div class="chart-wrap"><canvas id="chartArmadaAGExped"></canvas></div>
+        </div>
+      </div>
+      <div class="table-scroll" style="max-height:360px;">
+        <table>
+          <thead><tr><th>Kategori</th><th>Total</th><th>HIT</th><th>MISS</th><th>% HIT</th></tr></thead>
+          <tbody id="armadaAGBody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="card" style="margin-bottom:18px;">
       <h2>Sumber Data — Miss Pemenuhan Armada</h2>
       <p style="font-size:.8rem;color:var(--muted);margin:-6px 0 12px;">Hit dihitung dari jumlah baris di data Transport Cost (per Bulan & Kategori), Miss dari sheet ini, Total = Hit + Miss.</p>
@@ -2267,7 +2327,7 @@ function loadArmada(){
     (data, fields)=>{
       armadaData = data; armadaFields = fields;
       document.getElementById('armadaSync').textContent = 'Tersambung — ' + data.length + ' baris · update ' + new Date().toLocaleTimeString('id-ID');
-      document.getElementById('armadaMapping').style.display = 'flex';
+      document.getElementById('armadaMapping').style.display = 'none';
       fillMappingSelect('armadaColBulan', fields, ['bulan','month']);
       fillMappingSelect('armadaColKategori', fields, ['expedition','ekspedisi','region','vehicle','kategori']);
       fillMappingSelect('armadaColRequest', fields, ['request','rencana','plan']);
@@ -2275,6 +2335,7 @@ function loadArmada(){
       fillMappingSelect('armadaColJenis', fields, ['jenis','vehicle','armada','tipe']);
       fillMappingSelect('armadaColPlan', fields, ['plan','rencana']);
       fillMappingSelect('armadaColDatang', fields, ['datang','arrival','tiba']);
+      renderArmadaAG();
       renderArmada();
     },
     (msg)=>{ document.getElementById('armadaSync').textContent = msg; }
@@ -2343,6 +2404,145 @@ function getFilteredArmada(){
     return true;
   });
 }
+
+/* ===================== PEMENUHAN ARMADA via Kolom AG ===================== */
+function renderArmadaAG(){
+  if(!armadaData.length || armadaFields.length < 33) {
+    document.getElementById('armadaAGCard').style.display = 'none';
+    return;
+  }
+  const colAG = armadaFields[32]; // kolom ke-33 = AG
+  const colBulan = document.getElementById('armadaColBulan').value;
+  const colKat = document.getElementById('armadaColKategori').value;
+  const colPlan = document.getElementById('armadaColPlan').value;
+
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const BULAN_TO_Q = {
+    'Januari':'Q1','Februari':'Q1','Maret':'Q1',
+    'April':'Q2','Mei':'Q2','Juni':'Q2',
+    'Juli':'Q3','Agustus':'Q3','September':'Q3',
+    'Oktober':'Q4','November':'Q4','Desember':'Q4'
+  };
+
+  const bulanSet = new Set(), expedSet = new Set(), weekSet = new Set();
+  armadaData.forEach(r=>{
+    const bln = (r[colBulan]||'').toString().trim();
+    if(bln) bulanSet.add(bln);
+    const kat = (r[colKat]||'').toString().trim();
+    if(kat) expedSet.add(kat);
+    if(colPlan){
+      const d = parseDate(r[colPlan]);
+      if(d) weekSet.add('W' + getWeekNum(d) + ' (' + d.getFullYear() + ')');
+    }
+  });
+  const prevExped = getPillValue('pillArmadaAGExped');
+  const prevBulan = getPillValue('pillArmadaAGBulan');
+  const prevWeek = getPillValue('pillArmadaAGWeek');
+  fillPills('pillArmadaAGExped', [...expedSet].sort());
+  fillPills('pillArmadaAGBulan', [...bulanSet].sort((a,b)=>bulanOrder.indexOf(a)-bulanOrder.indexOf(b)));
+  fillPills('pillArmadaAGWeek', [...weekSet].sort((a,b)=>{
+    const na=a.match(/W(\d+) \((\d+)\)/), nb=b.match(/W(\d+) \((\d+)\)/);
+    if(na[2]!==nb[2]) return na[2]-nb[2];
+    return na[1]-nb[1];
+  }));
+  [['pillArmadaAGExped',prevExped,expedSet],['pillArmadaAGBulan',prevBulan,bulanSet],['pillArmadaAGWeek',prevWeek,weekSet]].forEach(([cid,prev,set])=>{
+    if(prev && set.has(prev)){
+      document.getElementById(cid).querySelectorAll('.pill').forEach(p=>p.classList.toggle('active', p.dataset.value===prev));
+    }
+  });
+
+  const expedPill = getPillValue('pillArmadaAGExped');
+  const bulanPill = getPillValue('pillArmadaAGBulan');
+  const weekPill = getPillValue('pillArmadaAGWeek');
+  const quartalPill = getPillValue('pillArmadaAGQuartal');
+
+  const filtered = armadaData.filter(r=>{
+    if(expedPill && (r[colKat]||'').toString().trim() !== expedPill) return false;
+    if(bulanPill && (r[colBulan]||'').toString().trim() !== bulanPill) return false;
+    if(quartalPill && BULAN_TO_Q[(r[colBulan]||'').toString().trim()] !== quartalPill) return false;
+    if(weekPill && colPlan){
+      const d = parseDate(r[colPlan]);
+      const wk = d ? 'W' + getWeekNum(d) + ' (' + d.getFullYear() + ')' : '';
+      if(wk !== weekPill) return false;
+    }
+    return true;
+  });
+
+  let total=0, hit=0;
+  const byBulan = {}, byExped = {};
+  filtered.forEach(r=>{
+    const ag = (r[colAG]||'').toString().trim();
+    const isHit = ag === '1';
+    total++;
+    if(isHit) hit++;
+
+    const bln = (r[colBulan]||'-').toString().trim() || '-';
+    if(!byBulan[bln]) byBulan[bln] = {total:0, hit:0};
+    byBulan[bln].total++; if(isHit) byBulan[bln].hit++;
+
+    const exp = (r[colKat]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
+    if(!byExped[exp]) byExped[exp] = {total:0, hit:0};
+    byExped[exp].total++; if(isHit) byExped[exp].hit++;
+  });
+  const miss = total - hit;
+
+  document.getElementById('armadaAGCard').style.display = '';
+  document.getElementById('armadaAGKpiTotal').textContent = total.toLocaleString('id-ID');
+  document.getElementById('armadaAGKpiHit').textContent = hit.toLocaleString('id-ID');
+  document.getElementById('armadaAGKpiMiss').textContent = miss.toLocaleString('id-ID');
+  document.getElementById('armadaAGKpiPct').textContent = (total? Math.round(hit/total*100):0) + '%';
+
+  function buildAGChart(canvasId, map, order){
+    let labels = Object.keys(map);
+    if(order) labels = order.filter(l=>map[l]).concat(labels.filter(l=>!order.includes(l)));
+    else labels = labels.sort((a,b)=>map[b].total-map[a].total);
+    destroyChart(canvasId);
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      type:'bar',
+      data:{ labels, datasets:[
+        {label:'HIT', data: labels.map(l=>map[l].hit), backgroundColor:'#3f8f5b'},
+        {label:'MISS', data: labels.map(l=>map[l].total-map[l].hit), backgroundColor:'#c1452f'}
+      ]},
+      options:{responsive:true, maintainAspectRatio:false,
+        scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+        plugins:{legend:{position:'bottom'},
+          datalabels:{color:'#1b2a35', font:{weight:'bold',size:9},
+            formatter:(v,ctx)=>{
+              if(!v) return '';
+              const l = ctx.chart.data.labels[ctx.dataIndex];
+              const t = map[l].total;
+              return v + (t? ' ('+Math.round(v/t*100)+'%)':'');
+            }}}}
+    });
+  }
+  buildAGChart('chartArmadaAGBulan', byBulan, bulanOrder);
+  buildAGChart('chartArmadaAGExped', byExped);
+
+  document.getElementById('armadaAGBody').innerHTML = Object.keys(byBulan).map(b=>{
+    const g = byBulan[b], m = g.total - g.hit, pct = g.total? Math.round(g.hit/g.total*100):0;
+    return `<tr><td><strong>${b}</strong></td><td>${g.total}</td><td><span class="badge hit">${g.hit}</span></td><td><span class="badge miss">${m}</span></td><td>${pct}%</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+
+  ['pillArmadaAGExped','pillArmadaAGBulan','pillArmadaAGWeek'].forEach(cid=>{
+    const c = document.getElementById(cid);
+    c.querySelectorAll('.pill').forEach(p=>{
+      p.onclick = ()=>{
+        c.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+        p.classList.add('active');
+        renderArmadaAG();
+      };
+    });
+  });
+}
+
+const pillArmadaAGQuartalEl = document.getElementById('pillArmadaAGQuartal');
+pillArmadaAGQuartalEl.querySelectorAll('.pill').forEach(pill=>{
+  pill.addEventListener('click', ()=>{
+    pillArmadaAGQuartalEl.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+    pill.classList.add('active');
+    if(armadaData.length) renderArmadaAG();
+  });
+});
 
 function renderArmada(){
   if(!armadaData.length) return;
