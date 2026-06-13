@@ -539,6 +539,39 @@
     </div>
 
     <div class="card">
+      <h2>Delivery On Time — Darat & Laut (per Bulan, YTD)</h2>
+      <div class="grid2">
+        <div>
+          <h3 style="text-align:center;color:var(--steel);margin:0 0 8px;">DOT Darat</h3>
+          <div class="chart-wrap"><canvas id="chartDOTDaratBulan"></canvas></div>
+        </div>
+        <div>
+          <h3 style="text-align:center;color:var(--steel);margin:0 0 8px;">DOT Laut</h3>
+          <div class="chart-wrap"><canvas id="chartDOTLautBulan"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Pareto Issue Darat vs Laut</h2>
+      <div class="grid2">
+        <div>
+          <h3 style="text-align:center;color:var(--steel);margin:0 0 8px;">Issue Darat</h3>
+          <div class="chart-wrap" style="height:320px;"><canvas id="chartIssueDarat"></canvas></div>
+        </div>
+        <div>
+          <h3 style="text-align:center;color:var(--steel);margin:0 0 8px;">Issue Laut</h3>
+          <div class="chart-wrap" style="height:320px;"><canvas id="chartIssueLaut"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Data Miss DOT by Transporter (YTD)</h2>
+      <div class="chart-wrap" style="height:480px;"><canvas id="chartMissTransporter"></canvas></div>
+    </div>
+
+    <div class="card">
       <h2>Ringkasan per Kategori</h2>
       <div class="filters">
         <select id="groupBySelect">
@@ -644,6 +677,61 @@
         <label>Kolom Tanggal Plan <select id="armadaColPlan"></select></label>
         <label>Kolom Tanggal Datang Pabrik <select id="armadaColDatang"></select></label>
         <button onclick="renderArmada()">Terapkan</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px;">
+      <h2>Sumber Data — Miss Pemenuhan Armada</h2>
+      <p style="font-size:.8rem;color:var(--muted);margin:-6px 0 12px;">Hit dihitung dari jumlah baris di data Transport Cost (per Bulan & Kategori), Miss dari sheet ini, Total = Hit + Miss.</p>
+      <div class="sourcebar" style="padding:0;border:none;margin-bottom:14px;">
+        <input type="text" id="armadaMissUrl" placeholder="Tempel link CSV publish 'Data Miss Armada'..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vQKpOyj1keIPjx7GoxdDbGUOLlo9S6YpwKSdBz3piVmV4Vvryu3jNSPd9zeIG2Dfclq4ga6NyayqvK0/pub?gid=1720095364&single=true&output=csv">
+        <input type="text" id="armadaMissSkip" placeholder="Skip baris" value="0" style="max-width:90px;flex:none;">
+        <button onclick="loadArmadaMiss()">Muat Data</button>
+        <span class="status" id="armadaMissSync">Belum dimuat</span>
+      </div>
+      <div class="mapping-bar" id="armadaMissMapping" style="display:none;">
+        <label>Kolom Bulan <select id="armadaMissColBulan"></select></label>
+        <label>Kolom Kategori (Ekspedisi) <select id="armadaMissColKategori"></select></label>
+        <label>Kolom Jumlah Miss <select id="armadaMissColJumlah"></select></label>
+        <button onclick="renderArmadaPemenuhan()">Terapkan</button>
+      </div>
+    </div>
+
+    <div class="card" id="armadaPemenuhanCard" style="display:none;">
+      <h2>Pemenuhan Armada (Hit dari Cost, Miss dari Sheet Terpisah)</h2>
+      <div class="kpi-row" style="margin-bottom:18px;">
+        <div class="kpi green">
+          <div class="label">Total Hit</div>
+          <div class="value" id="pemenuhanKpiHit">0</div>
+        </div>
+        <div class="kpi red">
+          <div class="label">Total Miss</div>
+          <div class="value" id="pemenuhanKpiMiss">0</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Total</div>
+          <div class="value" id="pemenuhanKpiTotal">0</div>
+        </div>
+        <div class="kpi amber">
+          <div class="label">% Pemenuhan</div>
+          <div class="value" id="pemenuhanKpiPct">0%</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h2>Pemenuhan per Bulan</h2>
+          <div class="chart-wrap"><canvas id="chartPemenuhanBulan"></canvas></div>
+        </div>
+        <div class="card">
+          <h2>Pemenuhan per Ekspedisi</h2>
+          <div class="chart-wrap"><canvas id="chartPemenuhanExped"></canvas></div>
+        </div>
+      </div>
+      <div class="table-scroll" style="max-height:360px;">
+        <table>
+          <thead><tr><th>Bulan</th><th>Ekspedisi</th><th>Hit</th><th>Miss</th><th>Total</th><th>% Pemenuhan</th></tr></thead>
+          <tbody id="pemenuhanBody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -1100,7 +1188,11 @@ function getWeekNum(d){
 
 function renderDOTDaratLaut(data){
   const weekGroups = { Darat:{}, Laut:{} };
+  const bulanGroups = { Darat:{}, Laut:{} };
   const issueGroups = { Darat:{}, Laut:{} };
+  const transporterMiss = {};
+
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
   data.forEach(r=>{
     const kat = getDaratLaut(r['Vehicle Type']);
@@ -1112,21 +1204,33 @@ function renderDOTDaratLaut(data){
     if(r._status==='hit') weekGroups[kat][wk].hit++;
     else if(r._status==='miss') weekGroups[kat][wk].miss++;
 
+    const bln = (r['BULAN']||'-').trim() || '-';
+    if(!bulanGroups[kat][bln]) bulanGroups[kat][bln] = {hit:0, miss:0};
+    if(r._status==='hit') bulanGroups[kat][bln].hit++;
+    else if(r._status==='miss') bulanGroups[kat][bln].miss++;
+
     const iss = (r['ISSUE']||'').trim();
     if(r._status==='miss' && iss){
       issueGroups[kat][iss] = (issueGroups[kat][iss]||0) + 1;
+      const exp = (r['Expedition Id']||'Tidak diketahui').trim() || 'Tidak diketahui';
+      transporterMiss[exp] = (transporterMiss[exp]||0) + 1;
     }
   });
 
-  function buildChart(canvasId, groups){
-    const weekKeys = Object.keys(groups).filter(w=>w!=='Total').sort((a,b)=>{
-      return parseInt(a.replace('Week ','')) - parseInt(b.replace('Week ',''));
-    });
+  function buildChart(canvasId, groups, labelOrder){
+    let labels;
+    if(labelOrder){
+      labels = labelOrder.filter(l=>groups[l]);
+    } else {
+      labels = Object.keys(groups).filter(w=>w!=='Total').sort((a,b)=>{
+        return parseInt(a.replace('Week ','')) - parseInt(b.replace('Week ',''));
+      });
+    }
     let totalHit=0, totalMiss=0;
-    weekKeys.forEach(w=>{ totalHit+=groups[w].hit; totalMiss+=groups[w].miss; });
-    const labels = [...weekKeys, 'Total'];
-    const hitData = [...weekKeys.map(w=>groups[w].hit), totalHit];
-    const missData = [...weekKeys.map(w=>groups[w].miss), totalMiss];
+    labels.forEach(w=>{ totalHit+=groups[w].hit; totalMiss+=groups[w].miss; });
+    labels = [...labels, 'Total'];
+    const hitData = labels.map(w=> w==='Total'? totalHit : groups[w].hit);
+    const missData = labels.map(w=> w==='Total'? totalMiss : groups[w].miss);
     const achieveData = labels.map((l,i)=>{
       const h = hitData[i], m = missData[i], t = h+m;
       return t ? Math.round(h/t*1000)/10 : 0;
@@ -1160,6 +1264,8 @@ function renderDOTDaratLaut(data){
 
   buildChart('chartDOTDarat', weekGroups.Darat);
   buildChart('chartDOTLaut', weekGroups.Laut);
+  buildChart('chartDOTDaratBulan', bulanGroups.Darat, bulanOrder);
+  buildChart('chartDOTLautBulan', bulanGroups.Laut, bulanOrder);
 
   // Tabel issue
   const rows = [];
@@ -1186,6 +1292,37 @@ function renderDOTDaratLaut(data){
 
   const tbody = document.getElementById('issueDaratLautBody');
   tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada issue</td></tr>';
+
+  // Pareto issue Darat & Laut terpisah
+  function buildPareto(canvasId, issueMap){
+    const labels = Object.keys(issueMap).sort((a,b)=>issueMap[a]-issueMap[b]); // ascending, biggest at bottom (horizontal)
+    const values = labels.map(l=>issueMap[l]);
+    destroyChart(canvasId);
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      type:'bar',
+      data:{ labels, datasets:[{label:'Jumlah Miss', data:values, backgroundColor:'#e0732a'}] },
+      options:{
+        indexAxis:'y',
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}, datalabels:{color:'#1b2a35', font:{weight:'bold',size:10}, anchor:'end', align:'right'}}
+      }
+    });
+  }
+  buildPareto('chartIssueDarat', issueGroups.Darat);
+  buildPareto('chartIssueLaut', issueGroups.Laut);
+
+  // Miss DOT by Transporter
+  const transLabels = Object.keys(transporterMiss).sort((a,b)=>transporterMiss[a]-transporterMiss[b]);
+  destroyChart('chartMissTransporter');
+  charts.chartMissTransporter = new Chart(document.getElementById('chartMissTransporter'), {
+    type:'bar',
+    data:{ labels: transLabels, datasets:[{label:'Jumlah Miss', data: transLabels.map(t=>transporterMiss[t]), backgroundColor:'#c1452f'}] },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, datalabels:{color:'#1b2a35', font:{weight:'bold',size:10}, anchor:'end', align:'right'}}
+    }
+  });
 }
 
 const PULAU_MAP = {
@@ -1759,6 +1896,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(document.getElementById('costUrl').value.trim()){
     loadCost();
   }
+  if(document.getElementById('armadaMissUrl').value.trim()){
+    loadArmadaMiss();
+  }
 });
 
 /* ===================== TAB NAVIGASI ===================== */
@@ -2057,6 +2197,7 @@ function loadCost(){
       fillMappingSelect('costColVehicle', fields, ['vehicle','jenis','armada','kontener','truck']);
       fillMappingSelect('costColM3', fields, ['m3','kubik','volume']);
       renderCost();
+      if(armadaMissData.length) renderArmadaPemenuhan();
     },
     (msg)=>{ document.getElementById('costSync').textContent = msg; }
   );
@@ -2184,6 +2325,155 @@ function renderCost(){
     </tr>`;
   }).join('');
   document.getElementById('costRatioCard').style.display = '';
+}
+
+/* ===================== MISS ARMADA + PEMENUHAN (gabungan dgn Cost) ===================== */
+let armadaMissData = [], armadaMissFields = [];
+function loadArmadaMiss(){
+  const url = document.getElementById('armadaMissUrl').value.trim();
+  if(!url){ alert('Masukkan link CSV publish dulu.'); return; }
+  genericLoad(url, document.getElementById('armadaMissSkip'),
+    (data, fields)=>{
+      armadaMissData = data; armadaMissFields = fields;
+      document.getElementById('armadaMissSync').textContent = 'Tersambung — ' + data.length + ' baris · update ' + new Date().toLocaleTimeString('id-ID');
+      document.getElementById('armadaMissMapping').style.display = 'flex';
+      fillMappingSelect('armadaMissColBulan', fields, ['bulan','month']);
+      fillMappingSelect('armadaMissColKategori', fields, ['expedition','ekspedisi','kategori','vehicle']);
+      fillMappingSelect('armadaMissColJumlah', fields, ['miss','jumlah','qty','unit']);
+      renderArmadaPemenuhan();
+    },
+    (msg)=>{ document.getElementById('armadaMissSync').textContent = msg; }
+  );
+}
+
+function renderArmadaPemenuhan(){
+  if(!armadaMissData.length || !costData.length) return;
+
+  const missColBulan = document.getElementById('armadaMissColBulan').value;
+  const missColKat = document.getElementById('armadaMissColKategori').value;
+  const missColJumlah = document.getElementById('armadaMissColJumlah').value;
+  const costColBulan = document.getElementById('costColBulan').value;
+  const costColKat = document.getElementById('costColKategori').value;
+
+  if(!missColBulan || !missColKat || !missColJumlah || !costColBulan || !costColKat){
+    document.getElementById('armadaPemenuhanCard').style.display = 'none';
+    return;
+  }
+
+  // Hit = jumlah baris di costData per Bulan+Kategori
+  const hitMap = {};
+  costData.forEach(r=>{
+    const bln = (r[costColBulan]||'-').toString().trim() || '-';
+    const kat = (r[costColKat]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
+    const key = bln + '|' + kat;
+    hitMap[key] = (hitMap[key]||0) + 1;
+  });
+
+  // Miss dari sheet terpisah
+  const missMap = {};
+  armadaMissData.forEach(r=>{
+    const bln = (r[missColBulan]||'-').toString().trim() || '-';
+    const kat = (r[missColKat]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
+    const key = bln + '|' + kat;
+    missMap[key] = (missMap[key]||0) + toNumber(r[missColJumlah]);
+  });
+
+  const allKeys = new Set([...Object.keys(hitMap), ...Object.keys(missMap)]);
+  const rows = [];
+  let totalHit=0, totalMiss=0;
+  const byBulan = {}, byExped = {};
+
+  allKeys.forEach(key=>{
+    const [bln, kat] = key.split('|');
+    const hit = hitMap[key] || 0;
+    const miss = missMap[key] || 0;
+    const total = hit + miss;
+    const pct = total ? Math.round(hit/total*100) : 0;
+    totalHit += hit; totalMiss += miss;
+    rows.push({bln, kat, hit, miss, total, pct});
+
+    if(!byBulan[bln]) byBulan[bln] = {hit:0, miss:0};
+    byBulan[bln].hit += hit; byBulan[bln].miss += miss;
+    if(!byExped[kat]) byExped[kat] = {hit:0, miss:0};
+    byExped[kat].hit += hit; byExped[kat].miss += miss;
+  });
+
+  const grandTotal = totalHit + totalMiss;
+  document.getElementById('pemenuhanKpiHit').textContent = totalHit.toLocaleString('id-ID');
+  document.getElementById('pemenuhanKpiMiss').textContent = totalMiss.toLocaleString('id-ID');
+  document.getElementById('pemenuhanKpiTotal').textContent = grandTotal.toLocaleString('id-ID');
+  document.getElementById('pemenuhanKpiPct').textContent = (grandTotal? Math.round(totalHit/grandTotal*100):0) + '%';
+  document.getElementById('armadaPemenuhanCard').style.display = '';
+
+  // tabel
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  rows.sort((a,b)=>{
+    const ia=bulanOrder.indexOf(a.bln), ib=bulanOrder.indexOf(b.bln);
+    if(ia!==ib) return (ia===-1?99:ia)-(ib===-1?99:ib);
+    return b.total - a.total;
+  });
+  document.getElementById('pemenuhanBody').innerHTML = rows.map(r=>`<tr>
+    <td>${r.bln}</td><td>${r.kat}</td>
+    <td><span class="badge hit">${r.hit}</span></td>
+    <td><span class="badge miss">${r.miss}</span></td>
+    <td>${r.total}</td>
+    <td>${r.pct}%</td>
+  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+
+  // chart per bulan
+  const bulanLabels = Object.keys(byBulan).sort((a,b)=>{
+    const ia=bulanOrder.indexOf(a), ib=bulanOrder.indexOf(b);
+    if(ia===-1&&ib===-1) return a.localeCompare(b);
+    if(ia===-1) return 1; if(ib===-1) return -1;
+    return ia-ib;
+  });
+  destroyChart('pemenuhanBulan');
+  charts.pemenuhanBulan = new Chart(document.getElementById('chartPemenuhanBulan'), {
+    type:'bar',
+    data:{ labels: bulanLabels, datasets:[
+      {label:'Hit', data: bulanLabels.map(b=>byBulan[b].hit), backgroundColor:'#3f8f5b'},
+      {label:'Miss', data: bulanLabels.map(b=>byBulan[b].miss), backgroundColor:'#c1452f'}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+      plugins:{legend:{position:'bottom'},
+        datalabels:{
+          color:'#1b2a35', font:{weight:'bold',size:10},
+          formatter:(value,ctx)=>{
+            if(!value) return '';
+            const b = ctx.chart.data.labels[ctx.dataIndex];
+            const total = byBulan[b].hit + byBulan[b].miss;
+            const pct = total ? Math.round(value/total*100) : 0;
+            return value + ' (' + pct + '%)';
+          }
+        }
+      }}
+  });
+
+  // chart per ekspedisi
+  const expedLabels = Object.keys(byExped).sort((a,b)=>(byExped[b].hit+byExped[b].miss)-(byExped[a].hit+byExped[a].miss));
+  destroyChart('pemenuhanExped');
+  charts.pemenuhanExped = new Chart(document.getElementById('chartPemenuhanExped'), {
+    type:'bar',
+    data:{ labels: expedLabels, datasets:[
+      {label:'Hit', data: expedLabels.map(e=>byExped[e].hit), backgroundColor:'#3f8f5b'},
+      {label:'Miss', data: expedLabels.map(e=>byExped[e].miss), backgroundColor:'#c1452f'}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+      plugins:{legend:{position:'bottom'},
+        datalabels:{
+          color:'#1b2a35', font:{weight:'bold',size:9},
+          formatter:(value,ctx)=>{
+            if(!value) return '';
+            const e = ctx.chart.data.labels[ctx.dataIndex];
+            const total = byExped[e].hit + byExped[e].miss;
+            const pct = total ? Math.round(value/total*100) : 0;
+            return value + ' (' + pct + '%)';
+          }
+        }
+      }}
+  });
 }
 </script>
 
