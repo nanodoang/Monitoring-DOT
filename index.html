@@ -453,36 +453,7 @@
 
 
     <div class="grid2">
-      <div class="card">
-        <h2>Monitoring ETA Kontainer (Sheet Terpisah)</h2>
-        <div class="sourcebar" style="padding:0;border:none;margin-bottom:14px;">
-          <input type="text" id="sheetUrl2" placeholder="Tempel link CSV publish 'Monitoring ETA Kontainer'..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSr5a-IuvbhOjfsbATYVtgSyQ5YVRGYK2nYgNC7yxhQwHnnsUbndjYVZ0HsQ00qcu8K-HEVVq_SLAyh/pub?gid=1331290254&single=true&output=csv">
-          <input type="text" id="skipRows2" placeholder="Skip baris" value="0" style="max-width:90px;flex:none;">
-          <button onclick="loadData2()">Muat Data</button>
-          <span class="status" id="lastSync2">Belum dimuat</span>
-        </div>
-        <div class="filters" id="eta2Filters" style="display:none;">
-          <select id="filterEta2Col"></select>
-          <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">dari
-            <input type="date" id="filterEta2From">
-          </label>
-          <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">s.d.
-            <input type="date" id="filterEta2To">
-          </label>
-        </div>
-        <div class="mapping-bar" id="eta2StatusMapping" style="display:none;">
-          <label>Kolom ETA <select id="eta2ColEta"></select></label>
-          <label>Kolom Aktual Sandar <select id="eta2ColAktual"></select></label>
-        </div>
-        <div class="table-scroll" id="eta2TableWrap" style="display:none;max-height:480px;">
-          <table>
-            <thead><tr id="eta2Head"></tr></thead>
-            <tbody id="eta2Body"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
+      <div class="card" style="grid-column:1 / -1;">
         <h2>DOT per Ekspedisi</h2>
         <div class="chart-wrap"><canvas id="chartDOTExped"></canvas></div>
         <div class="table-scroll" style="margin-top:14px;max-height:300px;">
@@ -906,24 +877,55 @@
       </div>
     </div>
 
-    <div class="card" id="costRatioCard" style="display:none;">
-      <h2>Cost Ratio per M3 vs Target</h2>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Jenis Armada</th>
-              <th>Total M3</th>
-              <th>Actual Cost</th>
-              <th>Actual Rp/M3</th>
-              <th>Target Rp/M3</th>
-              <th>Selisih Rp/M3</th>
-              <th>Actual % thd Total</th>
-              <th>Target %</th>
-            </tr>
-          </thead>
-          <tbody id="costRatioBody"></tbody>
-        </table>
+    <div class="grid2">
+      <div class="card" id="costRatioCard" style="display:none;">
+        <h2>Cost Ratio per M3 vs Target</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Jenis Armada</th>
+                <th>Total M3</th>
+                <th>Actual Cost</th>
+                <th>Actual Rp/M3</th>
+                <th>Target Rp/M3</th>
+                <th>Selisih Rp/M3</th>
+                <th>Actual % thd Total</th>
+                <th>Target %</th>
+              </tr>
+            </thead>
+            <tbody id="costRatioBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Monitoring ETA Kontainer (Sheet Terpisah)</h2>
+        <div class="sourcebar" style="padding:0;border:none;margin-bottom:14px;">
+          <input type="text" id="sheetUrl2" placeholder="Tempel link CSV publish 'Monitoring ETA Kontainer'..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSr5a-IuvbhOjfsbATYVtgSyQ5YVRGYK2nYgNC7yxhQwHnnsUbndjYVZ0HsQ00qcu8K-HEVVq_SLAyh/pub?gid=1331290254&single=true&output=csv">
+          <input type="text" id="skipRows2" placeholder="Skip baris" value="0" style="max-width:90px;flex:none;">
+          <button onclick="loadData2()">Muat Data</button>
+          <span class="status" id="lastSync2">Belum dimuat</span>
+        </div>
+        <div class="filters" id="eta2Filters" style="display:none;">
+          <select id="filterEta2Col"></select>
+          <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">dari
+            <input type="date" id="filterEta2From">
+          </label>
+          <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">s.d.
+            <input type="date" id="filterEta2To">
+          </label>
+        </div>
+        <div class="mapping-bar" id="eta2StatusMapping" style="display:none;">
+          <label>Kolom ETA <select id="eta2ColEta"></select></label>
+          <label>Kolom Aktual Sandar <select id="eta2ColAktual"></select></label>
+        </div>
+        <div class="table-scroll" id="eta2TableWrap" style="display:none;max-height:480px;">
+          <table>
+            <thead><tr id="eta2Head"></tr></thead>
+            <tbody id="eta2Body"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
