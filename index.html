@@ -801,7 +801,7 @@
     </div>
 
     <div class="card" id="armadaPemenuhanCard" style="display:none;">
-      <h2>Pemenuhan Armada (Hit dari Cost, Miss dari Sheet Terpisah)</h2>
+      <h2>Pemenuhan Armada — Data dari Transport Cost</h2>
       <div class="kpi-row" style="margin-bottom:18px;">
         <div class="kpi green">
           <div class="label">Total Hit</div>
@@ -830,9 +830,24 @@
           <div class="chart-wrap"><canvas id="chartPemenuhanExped"></canvas></div>
         </div>
       </div>
-      <div class="table-scroll" style="max-height:360px;">
+      <h2 style="margin:16px 0 8px;">Detail Pengiriman (dari Data Cost)</h2>
+      <div class="table-scroll" style="max-height:480px;">
         <table>
-          <thead><tr><th>Bulan</th><th>Ekspedisi</th><th>Hit</th><th>Miss</th><th>Total</th><th>% Pemenuhan</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Delivery Date</th>
+              <th>Expedition Code</th>
+              <th>Customer Name</th>
+              <th>Vehicle Type</th>
+              <th>Ship Point</th>
+              <th>Province</th>
+              <th>Qty M3</th>
+              <th>Rp/M³</th>
+              <th>Act Cost ratio %</th>
+              <th>Target Cost ratio %</th>
+              <th>TYPE</th>
+            </tr>
+          </thead>
           <tbody id="pemenuhanBody"></tbody>
         </table>
       </div>
@@ -2411,7 +2426,7 @@ function renderArmadaAG(){
     document.getElementById('armadaAGCard').style.display = 'none';
     return;
   }
-  const colAG = armadaFields[32]; // kolom ke-33 = AG
+  const colAG = armadaFields[27]; // kolom AB = ke-28 (0-indexed: 27)
   const colBulan = document.getElementById('armadaColBulan').value;
   const colKat = document.getElementById('armadaColKategori').value;
   const colPlan = document.getElementById('armadaColPlan').value;
@@ -2776,6 +2791,7 @@ function loadCost(){
       fillMappingSelect('costColM3', fields, ['m3','kubik','volume']);
       renderCost();
       if(armadaMissData.length) renderArmadaPemenuhan();
+      renderArmadaPemenuhan();
     },
     (msg)=>{ document.getElementById('costSync').textContent = msg; }
   );
@@ -2925,80 +2941,41 @@ function loadArmadaMiss(){
 }
 
 function renderArmadaPemenuhan(){
-  if(!armadaMissData.length || !costData.length) return;
+  if(!costData.length) return;
 
-  const missColBulan = document.getElementById('armadaMissColBulan').value;
-  const missColKat = document.getElementById('armadaMissColKategori').value;
-  const missColJumlah = document.getElementById('armadaMissColJumlah').value;
-  const costColBulan = document.getElementById('costColBulan').value;
-  const costColKat = document.getElementById('costColKategori').value;
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const BULAN_TO_Q = {
+    'Januari':'Q1','Februari':'Q1','Maret':'Q1',
+    'April':'Q2','Mei':'Q2','Juni':'Q2',
+    'Juli':'Q3','Agustus':'Q3','September':'Q3',
+    'Oktober':'Q4','November':'Q4','Desember':'Q4'
+  };
 
-  if(!missColBulan || !missColKat || !missColJumlah || !costColBulan || !costColKat){
-    document.getElementById('armadaPemenuhanCard').style.display = 'none';
-    return;
-  }
-
-  // Hit = jumlah baris di costData per Bulan+Kategori
-  const hitMap = {};
-  costData.forEach(r=>{
-    const bln = (r[costColBulan]||'-').toString().trim() || '-';
-    const kat = (r[costColKat]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
-    const key = bln + '|' + kat;
-    hitMap[key] = (hitMap[key]||0) + 1;
-  });
-
-  // Miss dari sheet terpisah
-  const missMap = {};
-  armadaMissData.forEach(r=>{
-    const bln = (r[missColBulan]||'-').toString().trim() || '-';
-    const kat = (r[missColKat]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
-    const key = bln + '|' + kat;
-    missMap[key] = (missMap[key]||0) + toNumber(r[missColJumlah]);
-  });
-
-  const allKeys = new Set([...Object.keys(hitMap), ...Object.keys(missMap)]);
-  const rows = [];
-  let totalHit=0, totalMiss=0;
-  const byBulan = {}, byExped = {};
-
-  allKeys.forEach(key=>{
-    const [bln, kat] = key.split('|');
-    const hit = hitMap[key] || 0;
-    const miss = missMap[key] || 0;
-    const total = hit + miss;
-    const pct = total ? Math.round(hit/total*100) : 0;
-    totalHit += hit; totalMiss += miss;
-    rows.push({bln, kat, hit, miss, total, pct});
-
-    if(!byBulan[bln]) byBulan[bln] = {hit:0, miss:0};
-    byBulan[bln].hit += hit; byBulan[bln].miss += miss;
-    if(!byExped[kat]) byExped[kat] = {hit:0, miss:0};
-    byExped[kat].hit += hit; byExped[kat].miss += miss;
-  });
-
+  // Nama kolom tetap sesuai header: Expedition Code, Delivery Date, Customer Name, Vehicle Type
+  const totalHit = costData.length;
+  const totalMiss = armadaMissData.length || 0;
   const grandTotal = totalHit + totalMiss;
+
   document.getElementById('pemenuhanKpiHit').textContent = totalHit.toLocaleString('id-ID');
   document.getElementById('pemenuhanKpiMiss').textContent = totalMiss.toLocaleString('id-ID');
   document.getElementById('pemenuhanKpiTotal').textContent = grandTotal.toLocaleString('id-ID');
   document.getElementById('pemenuhanKpiPct').textContent = (grandTotal? Math.round(totalHit/grandTotal*100):0) + '%';
   document.getElementById('armadaPemenuhanCard').style.display = '';
 
-  // tabel
-  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  rows.sort((a,b)=>{
-    const ia=bulanOrder.indexOf(a.bln), ib=bulanOrder.indexOf(b.bln);
-    if(ia!==ib) return (ia===-1?99:ia)-(ib===-1?99:ib);
-    return b.total - a.total;
-  });
-  document.getElementById('pemenuhanBody').innerHTML = rows.map(r=>`<tr>
-    <td>${r.bln}</td><td>${r.kat}</td>
-    <td><span class="badge hit">${r.hit}</span></td>
-    <td><span class="badge miss">${r.miss}</span></td>
-    <td>${r.total}</td>
-    <td>${r.pct}%</td>
-  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+  // Group per bulan (dari Delivery Date) dan per Ekspedisi
+  const byBulan = {}, byExped = {};
+  costData.forEach(r=>{
+    const delDate = parseDate(r['Delivery Date']);
+    const monthName = delDate ? delDate.toLocaleDateString('id-ID',{month:'long'}) : '-';
+    const bln = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    if(!byBulan[bln]) byBulan[bln] = 0;
+    byBulan[bln]++;
 
-  // chart per bulan
+    const exp = (r['Expedition Code']||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
+    if(!byExped[exp]) byExped[exp] = 0;
+    byExped[exp]++;
+  });
+
   const bulanLabels = Object.keys(byBulan).sort((a,b)=>{
     const ia=bulanOrder.indexOf(a), ib=bulanOrder.indexOf(b);
     if(ia===-1&&ib===-1) return a.localeCompare(b);
@@ -3009,49 +2986,39 @@ function renderArmadaPemenuhan(){
   charts.pemenuhanBulan = new Chart(document.getElementById('chartPemenuhanBulan'), {
     type:'bar',
     data:{ labels: bulanLabels, datasets:[
-      {label:'Hit', data: bulanLabels.map(b=>byBulan[b].hit), backgroundColor:'#3f8f5b'},
-      {label:'Miss', data: bulanLabels.map(b=>byBulan[b].miss), backgroundColor:'#c1452f'}
+      {label:'Total Pengiriman', data: bulanLabels.map(b=>byBulan[b]), backgroundColor:'#3f8f5b'}
     ]},
     options:{responsive:true, maintainAspectRatio:false,
-      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
       plugins:{legend:{position:'bottom'},
-        datalabels:{
-          color:'#1b2a35', font:{weight:'bold',size:10},
-          formatter:(value,ctx)=>{
-            if(!value) return '';
-            const b = ctx.chart.data.labels[ctx.dataIndex];
-            const total = byBulan[b].hit + byBulan[b].miss;
-            const pct = total ? Math.round(value/total*100) : 0;
-            return value + ' (' + pct + '%)';
-          }
-        }
-      }}
+        datalabels:{color:'#1b2a35', font:{weight:'bold',size:10}, formatter:v=>v||''}}}
   });
 
-  // chart per ekspedisi
-  const expedLabels = Object.keys(byExped).sort((a,b)=>(byExped[b].hit+byExped[b].miss)-(byExped[a].hit+byExped[a].miss));
+  const expedLabels = Object.keys(byExped).sort((a,b)=>byExped[b]-byExped[a]);
   destroyChart('pemenuhanExped');
   charts.pemenuhanExped = new Chart(document.getElementById('chartPemenuhanExped'), {
     type:'bar',
     data:{ labels: expedLabels, datasets:[
-      {label:'Hit', data: expedLabels.map(e=>byExped[e].hit), backgroundColor:'#3f8f5b'},
-      {label:'Miss', data: expedLabels.map(e=>byExped[e].miss), backgroundColor:'#c1452f'}
+      {label:'Jumlah Pengiriman', data: expedLabels.map(e=>byExped[e]), backgroundColor:'#3d6a8a'}
     ]},
     options:{responsive:true, maintainAspectRatio:false,
-      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
       plugins:{legend:{position:'bottom'},
-        datalabels:{
-          color:'#1b2a35', font:{weight:'bold',size:9},
-          formatter:(value,ctx)=>{
-            if(!value) return '';
-            const e = ctx.chart.data.labels[ctx.dataIndex];
-            const total = byExped[e].hit + byExped[e].miss;
-            const pct = total ? Math.round(value/total*100) : 0;
-            return value + ' (' + pct + '%)';
-          }
-        }
-      }}
+        datalabels:{color:'#1b2a35', font:{weight:'bold',size:9}, formatter:v=>v||''}}}
   });
+
+  // Tabel ringkas: Delivery Date, Ekspedisi, Customer Name, Vehicle Type
+  document.getElementById('pemenuhanBody').innerHTML = costData.slice(0,1000).map(r=>`<tr>
+    <td>${r['Delivery Date']||'-'}</td>
+    <td>${r['Expedition Code']||'-'}</td>
+    <td>${r['Customer Name']||'-'}</td>
+    <td>${r['Vehicle Type']||'-'}</td>
+    <td>${r['Ship Point']||'-'}</td>
+    <td>${r['Province']||'-'}</td>
+    <td>${r['Qty M3']||'-'}</td>
+    <td>${r['Rp/M³']||'-'}</td>
+    <td>${r['Act Cost ratio %']||'-'}</td>
+    <td>${r['Target Cost ratio %']||'-'}</td>
+    <td>${r['TYPE']||'-'}</td>
+  </tr>`).join('') || '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
 }
 </script>
 
