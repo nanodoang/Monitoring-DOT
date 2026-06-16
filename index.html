@@ -2176,6 +2176,126 @@ function fillMappingSelect(id, fields, guesses){
 }
 
 /* ===================== PEMENUHAN ARMADA ===================== */
+/* ===================== TRANSPORT COST ===================== */
+let costData = [], costFields = [];
+function loadCost(){
+  const url = document.getElementById('costUrl').value.trim();
+  if(!url){ alert('Masukkan link CSV publish dulu.'); return; }
+  genericLoad(url, document.getElementById('costSkip'),
+    (data, fields)=>{
+      costData = data.filter(r => Object.values(r).some(v => v && String(v).trim() !== ''));
+      costFields = fields;
+      document.getElementById('costSync').textContent = 'Tersambung — ' + costData.length + ' baris · update ' + new Date().toLocaleTimeString('id-ID');
+      document.getElementById('costMapping').style.display = 'flex';
+      fillMappingSelect('costColBulan', fields, ['bulan','month','delivery date','date']);
+      fillMappingSelect('costColKategori', fields, ['expedition','ekspedisi','region','vehicle','kategori']);
+      fillMappingSelect('costColBudget', fields, ['target','budget','anggaran','rencana']);
+      fillMappingSelect('costColActual', fields, ['act','actual','aktual','realisasi','price exp','rp/']);
+      fillMappingSelect('costColVehicle', fields, ['vehicle','jenis','armada','type']);
+      fillMappingSelect('costColM3', fields, ['qty m3','m3','kubik','volume']);
+      renderCost();
+    },
+    (msg)=>{ document.getElementById('costSync').textContent = msg; }
+  );
+}
+
+function renderCost(){
+  if(!costData.length) return;
+  const colBulan = document.getElementById('costColBulan').value;
+  const colKat = document.getElementById('costColKategori').value;
+  const colBudget = document.getElementById('costColBudget').value;
+  const colActual = document.getElementById('costColActual').value;
+
+  let totalBudget = 0, totalActual = 0;
+  const byKat = {}, byBulan = {};
+  costData.forEach(r=>{
+    const b = toNumber(r[colBudget]);
+    const a = toNumber(r[colActual]);
+    totalBudget += b; totalActual += a;
+    let kat = (r[colKat]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
+    let bln = (r[colBulan]||'-').toString().trim() || '-';
+    const dB = parseDate(bln); if(dB){ const m=dB.toLocaleDateString('id-ID',{month:'long'}); bln=m.charAt(0).toUpperCase()+m.slice(1); }
+    if(!byKat[kat]) byKat[kat] = {budget:0, actual:0};
+    byKat[kat].budget += b; byKat[kat].actual += a;
+    if(!byBulan[bln]) byBulan[bln] = {budget:0, actual:0};
+    byBulan[bln].budget += b; byBulan[bln].actual += a;
+  });
+
+  const selisih = totalActual - totalBudget;
+  const selisihPct = totalBudget ? Math.round(selisih/totalBudget*100) : 0;
+  document.getElementById('costKpiBudget').textContent = fmtRupiah(totalBudget);
+  document.getElementById('costKpiActual').textContent = fmtRupiah(totalActual);
+  document.getElementById('costKpiSelisih').textContent = fmtRupiah(selisih);
+  document.getElementById('costKpiSelisihPct').textContent = (selisih>=0?'+':'') + selisihPct + '% dari target';
+  document.getElementById('costKpiSelisihCard').className = 'kpi ' + (selisih > 0 ? 'red' : 'green');
+  document.getElementById('costKpiRow').style.display = '';
+  document.getElementById('costCharts').style.display = '';
+  document.getElementById('costTableCard').style.display = '';
+
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const katLabels = Object.keys(byKat).sort((a,b)=>byKat[b].actual-byKat[a].actual);
+  destroyChart('costCat');
+  charts.costCat = new Chart(document.getElementById('chartCostCat'), {
+    type:'bar',
+    data:{ labels: katLabels, datasets:[
+      {label:'Target/Budget', data: katLabels.map(k=>byKat[k].budget), backgroundColor:'#3d6a8a'},
+      {label:'Actual', data: katLabels.map(k=>byKat[k].actual), backgroundColor:'#e0732a'}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'}, datalabels:{color:'#1b2a35', font:{weight:'bold',size:9}, formatter:v=> v? Math.round(v).toLocaleString('id-ID') : ''}}}
+  });
+
+  const bulanLabels = Object.keys(byBulan).sort((a,b)=>{
+    const ia=bulanOrder.indexOf(a), ib=bulanOrder.indexOf(b);
+    if(ia===-1&&ib===-1) return a.localeCompare(b);
+    if(ia===-1) return 1; if(ib===-1) return -1;
+    return ia-ib;
+  });
+  destroyChart('costBulan');
+  charts.costBulan = new Chart(document.getElementById('chartCostBulan'), {
+    type:'line',
+    data:{ labels: bulanLabels, datasets:[
+      {label:'Target/Budget', data: bulanLabels.map(b=>byBulan[b].budget), borderColor:'#3d6a8a', backgroundColor:'#3d6a8a', tension:.3},
+      {label:'Actual', data: bulanLabels.map(b=>byBulan[b].actual), borderColor:'#e0732a', backgroundColor:'#e0732a', tension:.3}
+    ]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}, datalabels:{display:false}}}
+  });
+
+  // Cost Ratio per M3 vs Target
+  const colVehicle = document.getElementById('costColVehicle').value;
+  const colM3 = document.getElementById('costColM3').value;
+  if(colVehicle && colM3){
+    const TARGET = { 'kontener': { rpM3: 339336, pct: 4.35 }, 'truck': { rpM3: 154299, pct: 2.32 } };
+    const vehMap = {};
+    costData.forEach(r=>{
+      const veh = (r[colVehicle]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
+      if(!vehMap[veh]) vehMap[veh] = {m3:0, actual:0};
+      vehMap[veh].m3 += toNumber(r[colM3]);
+      vehMap[veh].actual += toNumber(r[colActual]);
+    });
+    const grandActual = Object.values(vehMap).reduce((s,v)=>s+v.actual,0);
+    document.getElementById('costRatioBody').innerHTML = Object.keys(vehMap).map(veh=>{
+      const v = vehMap[veh];
+      const actualRpM3 = v.m3 ? v.actual / v.m3 : 0;
+      const actualPct = grandActual ? (v.actual/grandActual*100) : 0;
+      const keyLower = veh.toLowerCase();
+      let target = null;
+      for(const k in TARGET){ if(keyLower.includes(k) || (k==='kontener'&&(keyLower.includes('kontain')||keyLower.includes('container')))) { target = TARGET[k]; break; } }
+      const targetRpM3 = target ? target.rpM3 : 0;
+      const selisih = actualRpM3 - targetRpM3;
+      const col = target ? (selisih>0 ? 'var(--red)' : 'var(--green)') : 'var(--muted)';
+      return `<tr><td><strong>${veh}</strong></td><td>${v.m3.toLocaleString('id-ID')}</td><td>${fmtRupiah(v.actual)}</td><td>${fmtRupiah(actualRpM3)}</td><td>${target?fmtRupiah(targetRpM3):'-'}</td><td style="color:${col};font-weight:600;">${target?fmtRupiah(selisih):'-'}</td><td>${actualPct.toFixed(2)}%</td><td>${target?target.pct.toFixed(2)+'%':'-'}</td></tr>`;
+    }).join('');
+    document.getElementById('costRatioCard').style.display = '';
+  } else {
+    document.getElementById('costRatioCard').style.display = 'none';
+  }
+
+  // tabel data
+  document.getElementById('costHead').innerHTML = costFields.map(f=>`<th>${f}</th>`).join('');
+  document.getElementById('costBody').innerHTML = costData.slice(0,1000).map(r=>'<tr>'+costFields.map(f=>`<td>${r[f]||'-'}</td>`).join('')+'</tr>').join('');
+}
+
 /* ===================== PEMENUHAN ARMADA (HIT kolom AA + MISS sheet) ===================== */
 let pemHitData = [], pemHitFields = [];
 let pemMissData = [], pemMissFields = [];
