@@ -713,6 +713,7 @@
         <label>Kolom Bulan <select id="pemColBulan"></select></label>
         <label>Kolom Tanggal (utk Week) <select id="pemColDate"></select></label>
         <label>Kolom Ekspedisi <select id="pemColExped"></select></label>
+        <label>Kolom Jenis (Darat/Laut) <select id="pemColJenis"></select></label>
         <button onclick="renderPemenuhan()">Terapkan</button>
       </div>
       <div class="pill-group" id="pillPemExped">
@@ -745,12 +746,23 @@
 
       <div class="grid2">
         <div class="card">
-          <h2>Pemenuhan per Bulan</h2>
-          <div class="chart-wrap"><canvas id="chartPemBulan"></canvas></div>
+          <h2>Pemenuhan per Bulan — Darat/Truck</h2>
+          <div class="chart-wrap"><canvas id="chartPemBulanDarat"></canvas></div>
         </div>
         <div class="card">
-          <h2>Pemenuhan per Ekspedisi</h2>
-          <div class="chart-wrap"><canvas id="chartPemExped"></canvas></div>
+          <h2>Pemenuhan per Bulan — Laut/Kontener</h2>
+          <div class="chart-wrap"><canvas id="chartPemBulanLaut"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Pemenuhan per Ekspedisi — Darat/Truck</h2>
+          <div class="chart-wrap"><canvas id="chartPemExpedDarat"></canvas></div>
+        </div>
+        <div class="card">
+          <h2>Pemenuhan per Ekspedisi — Laut/Kontener</h2>
+          <div class="chart-wrap"><canvas id="chartPemExpedLaut"></canvas></div>
         </div>
       </div>
 
@@ -768,7 +780,7 @@
       <h2 style="margin:16px 0 8px;">Detail per Bulan & Ekspedisi</h2>
       <div class="table-scroll" style="max-height:400px;">
         <table>
-          <thead><tr><th>Bulan</th><th>Ekspedisi</th><th>Plan</th><th>Hit</th><th>Miss</th><th>% Pemenuhan</th></tr></thead>
+          <thead><tr><th>Bulan</th><th>Ekspedisi</th><th>Jenis</th><th>Plan</th><th>Hit</th><th>Miss</th><th>% Pemenuhan</th></tr></thead>
           <tbody id="pemBody"></tbody>
         </table>
       </div>
@@ -2178,7 +2190,7 @@ function loadArmadaAll(){
       pemHitData = data; pemHitFields = fields;
       document.getElementById('armadaAllSync').textContent = 'HIT ' + data.length + ' baris, memuat MISS...';
       // isi dropdown
-      ['pemColHit','pemColBulan','pemColDate','pemColExped'].forEach(id=>{
+      ['pemColHit','pemColBulan','pemColDate','pemColExped','pemColJenis'].forEach(id=>{
         document.getElementById(id).innerHTML = fields.map(f=>`<option value="${f}">${f}</option>`).join('');
       });
       // Mapping eksplisit sesuai header sheet:
@@ -2188,10 +2200,12 @@ function loadArmadaAll(){
       const bulanCol = fields.find(f => f.toLowerCase().trim() === 'bulan') || fields.find(f=>f.toLowerCase().includes('bulan')) || '';
       const expedCol = fields.find(f => f.toLowerCase().trim() === 'expedition code') || fields.find(f=>f.toLowerCase().includes('expedition')) || '';
       const dateCol = fields.find(f => f.toLowerCase().includes('delivery date')) || fields.find(f=>f.toLowerCase().includes('date')) || '';
+      const jenisCol = fields.find(f => f.toLowerCase().includes('vehicle')) || fields.find(f=>f.toLowerCase().includes('jenis')) || fields.find(f=>f.toLowerCase().includes('type')) || '';
       if(hitCol) document.getElementById('pemColHit').value = hitCol;
       if(bulanCol) document.getElementById('pemColBulan').value = bulanCol;
       if(expedCol) document.getElementById('pemColExped').value = expedCol;
       if(dateCol) document.getElementById('pemColDate').value = dateCol;
+      if(jenisCol) document.getElementById('pemColJenis').value = jenisCol;
       if(missUrl){
         genericLoad(missUrl, document.getElementById('armadaMissSkip'),
           (d2, f2)=>{
@@ -2274,6 +2288,13 @@ function pemExpedFromRow(r){
   if(col){ const v=(r[col]||'').toString().trim(); if(v) return v; }
   return 'Tidak diketahui';
 }
+function pemJenisFromRow(r){
+  const col = document.getElementById('pemColJenis').value;
+  if(!col) return 'Darat';
+  const v = (r[col]||'').toString().toLowerCase();
+  if(v.includes('konten') || v.includes('kontain') || v.includes('container') || v.includes('laut')) return 'Laut';
+  return 'Darat';
+}
 function pemMissBulan(r){
   for(const f of pemMissFields){ const fl=f.toLowerCase(); if(fl.includes('bulan')){const v=(r[f]||'').trim(); if(v) return v;} }
   for(const f of pemMissFields){ const fl=f.toLowerCase(); if(fl.includes('tanggal')||fl.includes('date')){const d=parseDate(r[f]); if(d){const m=d.toLocaleDateString('id-ID',{month:'long'}); return m.charAt(0).toUpperCase()+m.slice(1);}} }
@@ -2282,6 +2303,17 @@ function pemMissBulan(r){
 function pemMissExped(r){
   for(const f of pemMissFields){ const fl=f.toLowerCase(); if(fl.includes('expedition')||fl.includes('ekspedisi')||fl.includes('exped')){const v=(r[f]||'').trim(); if(v) return v;} }
   return 'Tidak diketahui';
+}
+function pemMissJenis(r){
+  for(const f of pemMissFields){
+    const fl=f.toLowerCase();
+    if(fl.includes('vehicle')||fl.includes('jenis')||fl.includes('type')||fl.includes('armada')){
+      const v=(r[f]||'').toString().toLowerCase();
+      if(v.includes('konten')||v.includes('kontain')||v.includes('container')||v.includes('laut')) return 'Laut';
+      if(v) return 'Darat';
+    }
+  }
+  return 'Darat';
 }
 
 const BULAN_ORDER = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -2319,30 +2351,30 @@ function renderPemenuhan(){
     return true;
   }
 
-  // HIT: jumlahkan nilai kolom AA per baris yang lolos filter
-  const hitBulan={}, hitExped={}, hitWeek={};
-  let totalHit=0;
+  // Agregasi dengan split Jenis (Darat/Laut)
+  // struktur: hitBulan[jenis][bln], hitExped[jenis][exp], hitWeek[wk]
+  const hitBulan={Darat:{},Laut:{}}, hitExped={Darat:{},Laut:{}}, hitWeek={};
+  const missBulan={Darat:{},Laut:{}}, missExped={Darat:{},Laut:{}};
+  let totalHit=0, totalMiss=0;
+
   pemHitData.forEach(r=>{
-    const bln=pemBulanFromRow(r), exp=pemExpedFromRow(r), d=pemDateFromRow(r);
+    const bln=pemBulanFromRow(r), exp=pemExpedFromRow(r), d=pemDateFromRow(r), jenis=pemJenisFromRow(r);
     if(!matchFilter(bln,exp,d)) return;
     const val = toNumber(r[colAA]);
     totalHit += val;
-    hitBulan[bln]=(hitBulan[bln]||0)+val;
-    hitExped[exp]=(hitExped[exp]||0)+val;
+    hitBulan[jenis][bln]=(hitBulan[jenis][bln]||0)+val;
+    hitExped[jenis][exp]=(hitExped[jenis][exp]||0)+val;
     if(d){ const wk='W'+getWeekNum(d)+' ('+d.getFullYear()+')'; hitWeek[wk]=(hitWeek[wk]||0)+val; }
   });
 
-  // MISS: jumlah baris (atau kolom jumlah) per filter
-  const missBulan={}, missExped={};
-  let totalMiss=0;
   pemMissData.forEach(r=>{
-    const bln=pemMissBulan(r), exp=pemMissExped(r);
+    const bln=pemMissBulan(r), exp=pemMissExped(r), jenis=pemMissJenis(r);
     if(fE && exp!==fE) return;
     if(fB && bln!==fB) return;
     if(fQ && BULAN_Q[bln]!==fQ) return;
     totalMiss += 1;
-    missBulan[bln]=(missBulan[bln]||0)+1;
-    missExped[exp]=(missExped[exp]||0)+1;
+    missBulan[jenis][bln]=(missBulan[jenis][bln]||0)+1;
+    missExped[jenis][exp]=(missExped[jenis][exp]||0)+1;
   });
 
   const plan = totalHit + totalMiss;
@@ -2351,36 +2383,44 @@ function renderPemenuhan(){
   document.getElementById('pemKpiMiss').textContent = totalMiss.toLocaleString('id-ID');
   document.getElementById('pemKpiPct').textContent = (plan? Math.round(totalHit/plan*100):0)+'%';
 
-  // chart per bulan (Hit vs Miss stacked)
-  const allBulan=[...new Set([...Object.keys(hitBulan),...Object.keys(missBulan)])].sort((a,b)=>{
-    const ia=BULAN_ORDER.indexOf(a),ib=BULAN_ORDER.indexOf(b);
-    if(ia===-1&&ib===-1)return a.localeCompare(b); if(ia===-1)return 1; if(ib===-1)return -1; return ia-ib;
-  });
-  destroyChart('pemBulan');
-  charts.pemBulan=new Chart(document.getElementById('chartPemBulan'),{type:'bar',
-    data:{labels:allBulan,datasets:[
-      {label:'Hit',data:allBulan.map(b=>hitBulan[b]||0),backgroundColor:'#3f8f5b'},
-      {label:'Miss',data:allBulan.map(b=>missBulan[b]||0),backgroundColor:'#c1452f'}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
-      plugins:{legend:{position:'bottom'},datalabels:{color:'#1b2a35',font:{weight:'bold',size:10},
-        formatter:(v,ctx)=>{if(!v)return'';const b=ctx.chart.data.labels[ctx.dataIndex];const t=(hitBulan[b]||0)+(missBulan[b]||0);return v+(t?' ('+Math.round(v/t*100)+'%)':'');}}}}
-  });
+  // Chart per bulan (Hit/Miss/% stacked) untuk satu jenis
+  function buildBulanChart(canvasId, hitMap, missMap){
+    const allBulan=[...new Set([...Object.keys(hitMap),...Object.keys(missMap)])].sort((a,b)=>{
+      const ia=BULAN_ORDER.indexOf(a),ib=BULAN_ORDER.indexOf(b);
+      if(ia===-1&&ib===-1)return a.localeCompare(b); if(ia===-1)return 1; if(ib===-1)return -1; return ia-ib;
+    });
+    destroyChart(canvasId);
+    charts[canvasId]=new Chart(document.getElementById(canvasId),{type:'bar',
+      data:{labels:allBulan,datasets:[
+        {label:'Hit',data:allBulan.map(b=>hitMap[b]||0),backgroundColor:'#3f8f5b'},
+        {label:'Miss',data:allBulan.map(b=>missMap[b]||0),backgroundColor:'#c1452f'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+        plugins:{legend:{position:'bottom'},datalabels:{color:'#1b2a35',font:{weight:'bold',size:10},
+          formatter:(v,ctx)=>{if(!v)return'';const b=ctx.chart.data.labels[ctx.dataIndex];const t=(hitMap[b]||0)+(missMap[b]||0);return v+(t?' ('+Math.round(v/t*100)+'%)':'');}}}}
+    });
+  }
+  buildBulanChart('chartPemBulanDarat', hitBulan.Darat, missBulan.Darat);
+  buildBulanChart('chartPemBulanLaut', hitBulan.Laut, missBulan.Laut);
 
-  // chart per ekspedisi
-  const allExped=[...new Set([...Object.keys(hitExped),...Object.keys(missExped)])].sort((a,b)=>((hitExped[b]||0)+(missExped[b]||0))-((hitExped[a]||0)+(missExped[a]||0)));
-  destroyChart('pemExped');
-  charts.pemExped=new Chart(document.getElementById('chartPemExped'),{type:'bar',
-    data:{labels:allExped,datasets:[
-      {label:'Hit',data:allExped.map(e=>hitExped[e]||0),backgroundColor:'#3f8f5b'},
-      {label:'Miss',data:allExped.map(e=>missExped[e]||0),backgroundColor:'#c1452f'}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
-      plugins:{legend:{position:'bottom'},datalabels:{color:'#1b2a35',font:{weight:'bold',size:9},
-        formatter:(v,ctx)=>{if(!v)return'';const e=ctx.chart.data.labels[ctx.dataIndex];const t=(hitExped[e]||0)+(missExped[e]||0);return v+(t?' ('+Math.round(v/t*100)+'%)':'');}}}}
-  });
+  // Chart per ekspedisi (Hit/Miss/% stacked) untuk satu jenis
+  function buildExpedChart(canvasId, hitMap, missMap){
+    const allExp=[...new Set([...Object.keys(hitMap),...Object.keys(missMap)])].sort((a,b)=>((hitMap[b]||0)+(missMap[b]||0))-((hitMap[a]||0)+(missMap[a]||0)));
+    destroyChart(canvasId);
+    charts[canvasId]=new Chart(document.getElementById(canvasId),{type:'bar',
+      data:{labels:allExp,datasets:[
+        {label:'Hit',data:allExp.map(e=>hitMap[e]||0),backgroundColor:'#3f8f5b'},
+        {label:'Miss',data:allExp.map(e=>missMap[e]||0),backgroundColor:'#c1452f'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+        plugins:{legend:{position:'bottom'},datalabels:{color:'#1b2a35',font:{weight:'bold',size:9},
+          formatter:(v,ctx)=>{if(!v)return'';const e=ctx.chart.data.labels[ctx.dataIndex];const t=(hitMap[e]||0)+(missMap[e]||0);return v+(t?' ('+Math.round(v/t*100)+'%)':'');}}}}
+    });
+  }
+  buildExpedChart('chartPemExpedDarat', hitExped.Darat, missExped.Darat);
+  buildExpedChart('chartPemExpedLaut', hitExped.Laut, missExped.Laut);
 
-  // chart per week (hit saja, krn miss tak punya week)
+  // chart per week (gabungan hit)
   const weekLabels=Object.keys(hitWeek).sort((a,b)=>{const na=a.match(/W(\d+) \((\d+)\)/),nb=b.match(/W(\d+) \((\d+)\)/); if(na[2]!==nb[2])return na[2]-nb[2]; return na[1]-nb[1];});
   destroyChart('pemWeek');
   charts.pemWeek=new Chart(document.getElementById('chartPemWeek'),{type:'bar',
@@ -2388,30 +2428,30 @@ function renderPemenuhan(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},datalabels:{color:'#1b2a35',font:{weight:'bold',size:10},formatter:v=>v||''}}}
   });
 
-  // kontribusi miss per ekspedisi
-  const missExpLabels=Object.keys(missExped).sort((a,b)=>missExped[b]-missExped[a]);
+  // kontribusi miss per ekspedisi (gabungan darat+laut)
+  const missExpCombined={};
+  ['Darat','Laut'].forEach(j=>Object.entries(missExped[j]).forEach(([e,v])=>{missExpCombined[e]=(missExpCombined[e]||0)+v;}));
+  const missExpLabels=Object.keys(missExpCombined).sort((a,b)=>missExpCombined[b]-missExpCombined[a]);
   destroyChart('pemMissExped');
   charts.pemMissExped=new Chart(document.getElementById('chartPemMissExped'),{type:'bar',
-    data:{labels:missExpLabels,datasets:[{label:'Miss',data:missExpLabels.map(e=>missExped[e]),backgroundColor:'#c1452f'}]},
+    data:{labels:missExpLabels,datasets:[{label:'Miss',data:missExpLabels.map(e=>missExpCombined[e]),backgroundColor:'#c1452f'}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{color:'#1b2a35',font:{weight:'bold',size:10},anchor:'end',align:'right'}}}
   });
 
-  // tabel per bulan+ekspedisi
-  const keys=new Set();
-  Object.keys(hitBulan).forEach(b=>Object.keys(hitExped).forEach(e=>{}));
+  // tabel per bulan+ekspedisi+jenis
   const rowMap={};
   pemHitData.forEach(r=>{
-    const bln=pemBulanFromRow(r),exp=pemExpedFromRow(r),d=pemDateFromRow(r);
+    const bln=pemBulanFromRow(r),exp=pemExpedFromRow(r),d=pemDateFromRow(r),jenis=pemJenisFromRow(r);
     if(!matchFilter(bln,exp,d))return;
-    const k=bln+'|'+exp; if(!rowMap[k])rowMap[k]={bln,exp,hit:0,miss:0}; rowMap[k].hit+=toNumber(r[colAA]);
+    const k=bln+'|'+exp+'|'+jenis; if(!rowMap[k])rowMap[k]={bln,exp,jenis,hit:0,miss:0}; rowMap[k].hit+=toNumber(r[colAA]);
   });
   pemMissData.forEach(r=>{
-    const bln=pemMissBulan(r),exp=pemMissExped(r);
+    const bln=pemMissBulan(r),exp=pemMissExped(r),jenis=pemMissJenis(r);
     if(fE&&exp!==fE)return; if(fB&&bln!==fB)return; if(fQ&&BULAN_Q[bln]!==fQ)return;
-    const k=bln+'|'+exp; if(!rowMap[k])rowMap[k]={bln,exp,hit:0,miss:0}; rowMap[k].miss+=1;
+    const k=bln+'|'+exp+'|'+jenis; if(!rowMap[k])rowMap[k]={bln,exp,jenis,hit:0,miss:0}; rowMap[k].miss+=1;
   });
   const rows=Object.values(rowMap).sort((a,b)=>{const ia=BULAN_ORDER.indexOf(a.bln),ib=BULAN_ORDER.indexOf(b.bln); if(ia!==ib)return(ia===-1?99:ia)-(ib===-1?99:ib); return(b.hit+b.miss)-(a.hit+a.miss);});
-  document.getElementById('pemBody').innerHTML=rows.map(r=>{const p=r.hit+r.miss,pct=p?Math.round(r.hit/p*100):0;return `<tr><td>${r.bln}</td><td>${r.exp}</td><td>${p}</td><td><span class="badge hit">${r.hit}</span></td><td><span class="badge miss">${r.miss}</span></td><td>${pct}%</td></tr>`;}).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
+  document.getElementById('pemBody').innerHTML=rows.map(r=>{const p=r.hit+r.miss,pct=p?Math.round(r.hit/p*100):0;return `<tr><td>${r.bln}</td><td>${r.exp}</td><td>${r.jenis}</td><td>${p}</td><td><span class="badge hit">${r.hit}</span></td><td><span class="badge miss">${r.miss}</span></td><td>${pct}%</td></tr>`;}).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px;">Tidak ada data</td></tr>';
 
   // bind pill clicks
   ['pillPemExped','pillPemBulan','pillPemWeek','pillPemQuartal'].forEach(cid=>{
