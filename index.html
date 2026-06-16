@@ -2345,6 +2345,21 @@ function pemMissJenis(r){
   }
   return 'Darat';
 }
+function pemMissWeek(r){
+  // kolom L = index 11 (berisi tanggal/week)
+  if(pemMissFields.length > 11){
+    const raw = (r[pemMissFields[11]]||'').toString().trim();
+    if(raw){
+      const d = parseDate(raw);
+      if(d) return 'W'+getWeekNum(d)+' ('+d.getFullYear()+')';
+      // kalau isinya angka week langsung
+      const num = parseInt(raw);
+      if(!isNaN(num)) return 'W'+num;
+      return raw;
+    }
+  }
+  return null;
+}
 
 const BULAN_ORDER = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const BULAN_Q = {'Januari':'Q1','Februari':'Q1','Maret':'Q1','April':'Q2','Mei':'Q2','Juni':'Q2','Juli':'Q3','Agustus':'Q3','September':'Q3','Oktober':'Q4','November':'Q4','Desember':'Q4'};
@@ -2393,6 +2408,7 @@ function renderPemenuhan(){
     if(d){ const wk='W'+getWeekNum(d)+' ('+d.getFullYear()+')'; hitWeek[wk]=(hitWeek[wk]||0)+val; }
   });
 
+  const missWeek={};
   pemMissData.forEach(r=>{
     const bln=pemMissBulan(r), exp=pemMissExped(r), jenis=pemMissJenis(r);
     if(fE && exp!==fE) return;
@@ -2401,6 +2417,8 @@ function renderPemenuhan(){
     totalMiss += 1;
     missBulan[jenis][bln]=(missBulan[jenis][bln]||0)+1;
     missExped[jenis][exp]=(missExped[jenis][exp]||0)+1;
+    const wk = pemMissWeek(r);
+    if(wk){ missWeek[wk]=(missWeek[wk]||0)+1; }
   });
 
   const plan = totalHit + totalMiss;
@@ -2446,12 +2464,21 @@ function renderPemenuhan(){
   buildExpedChart('chartPemExpedDarat', hitExped.Darat, missExped.Darat);
   buildExpedChart('chartPemExpedLaut', hitExped.Laut, missExped.Laut);
 
-  // chart per week (gabungan hit)
-  const weekLabels=Object.keys(hitWeek).sort((a,b)=>{const na=a.match(/W(\d+) \((\d+)\)/),nb=b.match(/W(\d+) \((\d+)\)/); if(na[2]!==nb[2])return na[2]-nb[2]; return na[1]-nb[1];});
+  // chart per week (Hit vs Miss stacked)
+  const allWeek=[...new Set([...Object.keys(hitWeek),...Object.keys(missWeek)])].sort((a,b)=>{
+    const na=a.match(/W(\d+)(?: \((\d+)\))?/),nb=b.match(/W(\d+)(?: \((\d+)\))?/);
+    if(na&&nb){ const ya=na[2]||0,yb=nb[2]||0; if(ya!==yb)return ya-yb; return na[1]-nb[1]; }
+    return a.localeCompare(b);
+  });
   destroyChart('pemWeek');
   charts.pemWeek=new Chart(document.getElementById('chartPemWeek'),{type:'bar',
-    data:{labels:weekLabels,datasets:[{label:'Hit',data:weekLabels.map(w=>hitWeek[w]),backgroundColor:'#3f8f5b'}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},datalabels:{color:'#1b2a35',font:{weight:'bold',size:10},formatter:v=>v||''}}}
+    data:{labels:allWeek,datasets:[
+      {label:'Hit',data:allWeek.map(w=>hitWeek[w]||0),backgroundColor:'#3f8f5b'},
+      {label:'Miss',data:allWeek.map(w=>missWeek[w]||0),backgroundColor:'#c1452f'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
+      plugins:{legend:{position:'bottom'},datalabels:{color:'#1b2a35',font:{weight:'bold',size:10},
+        formatter:(v,ctx)=>{if(!v)return'';const w=ctx.chart.data.labels[ctx.dataIndex];const t=(hitWeek[w]||0)+(missWeek[w]||0);return v+(t?' ('+Math.round(v/t*100)+'%)':'');}}}}
   });
 
   // kontribusi miss per ekspedisi (gabungan darat+laut)
