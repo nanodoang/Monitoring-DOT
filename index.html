@@ -2155,12 +2155,21 @@ function loadArmadaAll(){
     (data, fields)=>{
       pemHitData = data; pemHitFields = fields;
       document.getElementById('armadaAllSync').textContent = 'HIT ' + data.length + ' baris, memuat MISS...';
-      // isi dropdown mapping — default ke kolom yang sesuai struktur sheet
-      fillMappingSelect('pemColHit', fields, ['hit','jumlah','qty','realisasi']);
-      fillMappingSelect('pemColBulan', fields, ['bulan','month']);
-      fillMappingSelect('pemColDate', fields, ['delivery date','delivery','tanggal','date','plan']);
-      fillMappingSelect('pemColExped', fields, ['expedition code','expedition','ekspedisi','exped']);
-      autoPickHitColumn(data, fields);
+      // isi dropdown
+      ['pemColHit','pemColBulan','pemColDate','pemColExped'].forEach(id=>{
+        document.getElementById(id).innerHTML = fields.map(f=>`<option value="${f}">${f}</option>`).join('');
+      });
+      // Mapping eksplisit sesuai header sheet:
+      // HIT = kolom angka tepat setelah header "hit"
+      let hitIdx = fields.findIndex(f => f.toLowerCase().trim() === 'hit');
+      const hitCol = (hitIdx !== -1 && hitIdx+1 < fields.length) ? fields[hitIdx+1] : (fields.find(f=>f.toLowerCase().trim()==='hit')||fields[0]);
+      const bulanCol = fields.find(f => f.toLowerCase().trim() === 'bulan') || fields.find(f=>f.toLowerCase().includes('bulan')) || '';
+      const expedCol = fields.find(f => f.toLowerCase().trim() === 'expedition code') || fields.find(f=>f.toLowerCase().includes('expedition')) || '';
+      const dateCol = fields.find(f => f.toLowerCase().includes('delivery date')) || fields.find(f=>f.toLowerCase().includes('date')) || '';
+      if(hitCol) document.getElementById('pemColHit').value = hitCol;
+      if(bulanCol) document.getElementById('pemColBulan').value = bulanCol;
+      if(expedCol) document.getElementById('pemColExped').value = expedCol;
+      if(dateCol) document.getElementById('pemColDate').value = dateCol;
       if(missUrl){
         genericLoad(missUrl, document.getElementById('armadaMissSkip'),
           (d2, f2)=>{
