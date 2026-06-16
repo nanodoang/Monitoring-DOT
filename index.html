@@ -2965,6 +2965,7 @@ function renderArmadaPemenuhan(){
   // Group per bulan (dari Delivery Date) dan per Ekspedisi
   const byBulan = {}, byExped = {};
   costData.forEach(r=>{
+    if(!(r['Expedition Code']||'').trim() && !(r['Delivery Date']||'').trim()) return; // skip baris kosong
     const delDate = parseDate(r['Delivery Date']);
     const monthName = delDate ? delDate.toLocaleDateString('id-ID',{month:'long'}) : '-';
     const bln = monthName.charAt(0).toUpperCase() + monthName.slice(1);
@@ -3006,7 +3007,10 @@ function renderArmadaPemenuhan(){
   });
 
   // Tabel ringkas: Delivery Date, Ekspedisi, Customer Name, Vehicle Type
-  document.getElementById('pemenuhanBody').innerHTML = costData.slice(0,1000).map(r=>`<tr>
+  const costDataValid = costData.filter(r=>
+    (r['Expedition Code']||'').trim() || (r['Delivery Date']||'').trim() || (r['Customer Name']||'').trim()
+  );
+  document.getElementById('pemenuhanBody').innerHTML = costDataValid.slice(0,1000).map(r=>`<tr>
     <td>${r['Delivery Date']||'-'}</td>
     <td>${r['Expedition Code']||'-'}</td>
     <td>${r['Customer Name']||'-'}</td>
