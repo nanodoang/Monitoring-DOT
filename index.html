@@ -708,6 +708,13 @@
 
     <div class="card" id="pemenuhanCard" style="display:none;">
       <h2>Pemenuhan Armada</h2>
+      <div class="mapping-bar" id="pemMapping">
+        <label>Kolom HIT (angka) <select id="pemColHit"></select></label>
+        <label>Kolom Bulan <select id="pemColBulan"></select></label>
+        <label>Kolom Tanggal (utk Week) <select id="pemColDate"></select></label>
+        <label>Kolom Ekspedisi <select id="pemColExped"></select></label>
+        <button onclick="renderPemenuhan()">Terapkan</button>
+      </div>
       <div class="pill-group" id="pillPemExped">
         <div class="pill-label">Ekspedisi</div>
         <div class="pill active" data-value="">Semua</div>
@@ -2148,6 +2155,12 @@ function loadArmadaAll(){
     (data, fields)=>{
       pemHitData = data; pemHitFields = fields;
       document.getElementById('armadaAllSync').textContent = 'HIT ' + data.length + ' baris, memuat MISS...';
+      // isi dropdown mapping — default ke kolom yang sesuai struktur sheet
+      fillMappingSelect('pemColHit', fields, ['hit','jumlah','qty','realisasi']);
+      fillMappingSelect('pemColBulan', fields, ['bulan','month']);
+      fillMappingSelect('pemColDate', fields, ['delivery date','delivery','tanggal','date','plan']);
+      fillMappingSelect('pemColExped', fields, ['expedition code','expedition','ekspedisi','exped']);
+      autoPickHitColumn(data, fields);
       if(missUrl){
         genericLoad(missUrl, document.getElementById('armadaMissSkip'),
           (d2, f2)=>{
@@ -2165,34 +2178,69 @@ function loadArmadaAll(){
   );
 }
 
-function pemBulanFromRow(r){
-  // cari kolom bulan atau tanggal
-  for(const f of pemHitFields){
-    const fl = f.toLowerCase();
-    if(fl.includes('bulan')) { const v=(r[f]||'').trim(); if(v) return v; }
+function autoPickHitColumn(data, fields){
+  // Strategi 1: cari kolom tepat setelah kolom berheader "hit"
+  let hitHeaderIdx = fields.findIndex(f => f.toLowerCase().trim() === 'hit');
+  let candidate = null;
+  if(hitHeaderIdx !== -1 && hitHeaderIdx+1 < fields.length){
+    candidate = fields[hitHeaderIdx+1];
   }
-  for(const f of pemHitFields){
-    const fl = f.toLowerCase();
-    if(fl.includes('tanggal') || fl.includes('date') || fl.includes('plan') || fl.includes('delivery')){
-      const d = parseDate(r[f]); if(d){ const m=d.toLocaleDateString('id-ID',{month:'long'}); return m.charAt(0).toUpperCase()+m.slice(1); }
+
+  // Strategi 2: cari kolom yang RASIO nilai==1 paling tinggi (bukan jumlah absolut)
+  let bestCol = null, bestRatio = -1;
+  fields.forEach(f=>{
+    let count1=0, countFilled=0;
+    data.slice(0,300).forEach(r=>{
+      const raw=(r[f]||'').toString().trim();
+      if(raw==='') return;
+      countFilled++;
+      const v=toNumber(r[f]);
+      if(Math.abs(v-1)<0.01) count1++;
+    });
+    if(countFilled>=5){
+      const ratio = count1/countFilled;
+      if(ratio>bestRatio){ bestRatio=ratio; bestCol=f; }
+    }
+  });
+
+  // Prioritaskan candidate (setelah header hit) jika valid, else bestCol
+  let chosen = null;
+  if(candidate){
+    let c1=0,cf=0;
+    data.slice(0,300).forEach(r=>{ const raw=(r[candidate]||'').toString().trim(); if(raw){cf++; if(Math.abs(toNumber(r[candidate])-1)<0.01)c1++;} });
+    if(cf>=5 && c1/cf>0.7) chosen = candidate;
+  }
+  if(!chosen && bestRatio>0.7) chosen = bestCol;
+
+  if(chosen){
+    const sel=document.getElementById('pemColHit');
+    if([...sel.options].some(o=>o.value===chosen)) sel.value=chosen;
+  }
+}
+
+function pemBulanFromRow(r){
+  const col = document.getElementById('pemColBulan').value;
+  if(col){
+    const v = (r[col]||'').toString().trim();
+    if(v){
+      // jika isinya tanggal, konversi ke nama bulan
+      const d = parseDate(v);
+      if(d){ const m=d.toLocaleDateString('id-ID',{month:'long'}); return m.charAt(0).toUpperCase()+m.slice(1); }
+      return v;
     }
   }
+  const cd = document.getElementById('pemColDate').value;
+  if(cd){ const d=parseDate(r[cd]); if(d){const m=d.toLocaleDateString('id-ID',{month:'long'}); return m.charAt(0).toUpperCase()+m.slice(1);} }
   return '-';
 }
 function pemDateFromRow(r){
-  for(const f of pemHitFields){
-    const fl = f.toLowerCase();
-    if(fl.includes('tanggal') || fl.includes('date') || fl.includes('plan') || fl.includes('delivery')){
-      const d = parseDate(r[f]); if(d) return d;
-    }
-  }
+  const cd = document.getElementById('pemColDate').value;
+  if(cd){ const d=parseDate(r[cd]); if(d) return d; }
   return null;
 }
 function pemExpedFromRow(r){
-  for(const f of pemHitFields){
-    const fl = f.toLowerCase();
-    if(fl.includes('expedition') || fl.includes('ekspedisi') || fl.includes('exped')) { const v=(r[f]||'').trim(); if(v) return v; }
-  }
+  const col = document.getElementById('pemColExped').value;
+  if(col){ const v=(r[col]||'').toString().trim(); if(v) return v; }
   return 'Tidak diketahui';
 }
 function pemMissBulan(r){
@@ -2213,7 +2261,7 @@ function renderPemenuhan(){
   document.getElementById('pemenuhanCard') && (document.getElementById('pemenuhanCard').style.display='');
   document.getElementById('pemenuhanCard').style.display = '';
 
-  const colAA = pemHitFields[26]; // kolom AA = ke-27 (0-indexed 26)
+  const colAA = document.getElementById('pemColHit').value;
 
   // populate pills
   const expedSet=new Set(), bulanSet=new Set(), weekSet=new Set();
