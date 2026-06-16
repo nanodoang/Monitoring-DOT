@@ -2193,23 +2193,38 @@ function loadArmadaAll(){
       ['pemColHit','pemColBulan','pemColDate','pemColExped','pemColJenis'].forEach(id=>{
         document.getElementById(id).innerHTML = fields.map(f=>`<option value="${f}">${f}</option>`).join('');
       });
-      // Mapping eksplisit sesuai header sheet:
-      // HIT = kolom angka tepat setelah header "hit"
-      let hitIdx = fields.findIndex(f => f.toLowerCase().trim() === 'hit');
-      const hitCol = (hitIdx !== -1 && hitIdx+1 < fields.length) ? fields[hitIdx+1] : (fields.find(f=>f.toLowerCase().trim()==='hit')||fields[0]);
-      const bulanCol = fields.find(f => f.toLowerCase().trim() === 'bulan') || fields.find(f=>f.toLowerCase().includes('bulan')) || '';
-      const expedCol = fields.find(f => f.toLowerCase().trim() === 'expedition code') || fields.find(f=>f.toLowerCase().includes('expedition')) || '';
-      const dateCol = fields.find(f => f.toLowerCase().includes('delivery date')) || fields.find(f=>f.toLowerCase().includes('date')) || '';
+      // Mapping default dikunci sesuai struktur sheet HIT (header kosong → _N):
+      // _26 = HIT (angka 1), _28 = Bulan, _24 = Tanggal, _2 = Expedition Code, Vehicle Type utk jenis
+      const setIf = (id, val)=>{ const s=document.getElementById(id); if([...s.options].some(o=>o.value===val)) s.value=val; };
+
+      // coba kunci ke kolom spesifik dulu
+      setIf('pemColHit', '_26');
+      setIf('pemColBulan', '_28');
+      setIf('pemColDate', '_24');
+      setIf('pemColExped', '_2');
+
+      // fallback by header name jika _N tidak ada
+      if(document.getElementById('pemColHit').value !== '_26'){
+        let hitIdx = fields.findIndex(f => f.toLowerCase().trim() === 'hit');
+        const hitCol = (hitIdx !== -1 && hitIdx+1 < fields.length) ? fields[hitIdx+1] : fields[0];
+        if(hitCol) document.getElementById('pemColHit').value = hitCol;
+      }
+      if(document.getElementById('pemColBulan').value !== '_28'){
+        const bulanCol = fields.find(f => f.toLowerCase().trim() === 'bulan') || fields.find(f=>f.toLowerCase().includes('bulan'));
+        if(bulanCol) document.getElementById('pemColBulan').value = bulanCol;
+      }
+      if(document.getElementById('pemColExped').value !== '_2'){
+        const expedCol = fields.find(f => f.toLowerCase().includes('expedition'));
+        if(expedCol) document.getElementById('pemColExped').value = expedCol;
+      }
       const jenisCol = fields.find(f => f.toLowerCase().includes('vehicle')) || fields.find(f=>f.toLowerCase().includes('jenis')) || fields.find(f=>f.toLowerCase().includes('type')) || '';
-      if(hitCol) document.getElementById('pemColHit').value = hitCol;
-      if(bulanCol) document.getElementById('pemColBulan').value = bulanCol;
-      if(expedCol) document.getElementById('pemColExped').value = expedCol;
-      if(dateCol) document.getElementById('pemColDate').value = dateCol;
       if(jenisCol) document.getElementById('pemColJenis').value = jenisCol;
       if(missUrl){
         genericLoad(missUrl, document.getElementById('armadaMissSkip'),
           (d2, f2)=>{
             pemMissData = d2; pemMissFields = f2;
+            console.log('MISS fields:', f2);
+            console.log('MISS contoh baris:', d2[0]);
             document.getElementById('armadaAllSync').textContent = 'Tersambung — HIT ' + data.length + ', MISS ' + d2.length + ' baris · ' + new Date().toLocaleTimeString('id-ID');
             renderPemenuhan();
           },
