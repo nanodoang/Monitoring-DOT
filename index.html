@@ -2329,9 +2329,9 @@ function pemMissBulan(r){
   return '-';
 }
 function pemMissExped(r){
-  // kolom index 8 = kode ekspedisi (SPA, SJP, dll) yang sama dgn sheet HIT
-  if(pemMissFields.length > 8){
-    const v = (r[pemMissFields[8]]||'').toString().trim();
+  // kolom index 7 = kode ekspedisi (SPA, dll)
+  if(pemMissFields.length > 7){
+    const v = (r[pemMissFields[7]]||'').toString().trim();
     if(v) return v;
   }
   return 'Tidak diketahui';
