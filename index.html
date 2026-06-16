@@ -2223,8 +2223,14 @@ function loadArmadaAll(){
         genericLoad(missUrl, document.getElementById('armadaMissSkip'),
           (d2, f2)=>{
             pemMissData = d2; pemMissFields = f2;
-            console.log('MISS fields:', f2);
-            console.log('MISS contoh baris:', d2[0]);
+            // Sheet miss tanpa header asli: baris pertama terbaca jadi nama kolom.
+            // Nilai asli baris itu = nama field itu sendiri (f2[i]). Rekonstruksi:
+            if(f2[0] && /januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember/i.test(f2[0])){
+              const firstRow = {};
+              f2.forEach((f)=>{ firstRow[f] = f; });
+              pemMissData = [firstRow, ...d2];
+            }
+            console.log('MISS total baris:', pemMissData.length);
             document.getElementById('armadaAllSync').textContent = 'Tersambung — HIT ' + data.length + ', MISS ' + d2.length + ' baris · ' + new Date().toLocaleTimeString('id-ID');
             renderPemenuhan();
           },
@@ -2311,22 +2317,31 @@ function pemJenisFromRow(r){
   return 'Darat';
 }
 function pemMissBulan(r){
-  for(const f of pemMissFields){ const fl=f.toLowerCase(); if(fl.includes('bulan')){const v=(r[f]||'').trim(); if(v) return v;} }
-  for(const f of pemMissFields){ const fl=f.toLowerCase(); if(fl.includes('tanggal')||fl.includes('date')){const d=parseDate(r[f]); if(d){const m=d.toLocaleDateString('id-ID',{month:'long'}); return m.charAt(0).toUpperCase()+m.slice(1);}} }
+  // sheet miss tanpa header asli; kolom 0 = bulan
+  if(pemMissFields.length){
+    const v = (r[pemMissFields[0]]||'').toString().trim();
+    if(v){
+      const d = parseDate(v);
+      if(d){ const m=d.toLocaleDateString('id-ID',{month:'long'}); return m.charAt(0).toUpperCase()+m.slice(1); }
+      return v;
+    }
+  }
   return '-';
 }
 function pemMissExped(r){
-  for(const f of pemMissFields){ const fl=f.toLowerCase(); if(fl.includes('expedition')||fl.includes('ekspedisi')||fl.includes('exped')){const v=(r[f]||'').trim(); if(v) return v;} }
+  // kolom index 7 = kode ekspedisi (SPA, dll)
+  if(pemMissFields.length > 7){
+    const v = (r[pemMissFields[7]]||'').toString().trim();
+    if(v) return v;
+  }
   return 'Tidak diketahui';
 }
 function pemMissJenis(r){
-  for(const f of pemMissFields){
-    const fl=f.toLowerCase();
-    if(fl.includes('vehicle')||fl.includes('jenis')||fl.includes('type')||fl.includes('armada')){
-      const v=(r[f]||'').toString().toLowerCase();
-      if(v.includes('konten')||v.includes('kontain')||v.includes('container')||v.includes('laut')) return 'Laut';
-      if(v) return 'Darat';
-    }
+  // kolom index 9 = Darat/Laut
+  if(pemMissFields.length > 9){
+    const v = (r[pemMissFields[9]]||'').toString().toLowerCase();
+    if(v.includes('konten')||v.includes('kontain')||v.includes('container')||v.includes('laut')) return 'Laut';
+    if(v) return 'Darat';
   }
   return 'Darat';
 }
