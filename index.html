@@ -805,6 +805,27 @@
         <label>Kolom Rp/M³ (Rate) <select id="costColRate"></select></label>
         <button onclick="renderCost()">Terapkan</button>
       </div>
+
+      <div class="pill-group" id="pillCostExped" style="display:none;">
+        <div class="pill-label">Ekspedisi</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+      <div class="pill-group" id="pillCostBulan" style="display:none;">
+        <div class="pill-label">Bulan</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+      <div class="pill-group" id="pillCostWeek" style="display:none;">
+        <div class="pill-label">Week</div>
+        <div class="pill active" data-value="">Semua</div>
+      </div>
+      <div class="pill-group" id="pillCostQuartal" style="display:none;">
+        <div class="pill-label">Quartal</div>
+        <div class="pill active" data-value="">Semua</div>
+        <div class="pill" data-value="Q1">Q1 (Jan-Mar)</div>
+        <div class="pill" data-value="Q2">Q2 (Apr-Jun)</div>
+        <div class="pill" data-value="Q3">Q3 (Jul-Sep)</div>
+        <div class="pill" data-value="Q4">Q4 (Okt-Des)</div>
+      </div>
     </div>
 
     <div class="kpi-row" id="costKpiRow" style="display:none;">
@@ -1150,6 +1171,8 @@ function fillPills(containerId, values){
       pill.classList.add('active');
       if(containerId.startsWith('pillPem')){
         if(pemHitData.length) renderPemenuhan();
+      } else if(containerId.startsWith('pillCost')){
+        if(costData.length) renderCost();
       } else {
         if(rawData.length) renderAll();
       }
@@ -2205,7 +2228,7 @@ function fillMappingSelect(id, fields, guesses){
 
 /* ===================== PEMENUHAN ARMADA ===================== */
 /* ===================== TRANSPORT COST ===================== */
-let costData = [], costFields = [];
+let costData = [], costFields = [], costDataF = [];
 function loadCost(){
   const url = document.getElementById('costUrl').value.trim();
   if(!url){ alert('Masukkan link CSV publish dulu.'); return; }
@@ -2236,11 +2259,44 @@ function renderCost(){
   const colRate = document.getElementById('costColRate').value;
   const colVehicle = document.getElementById('costColVehicle').value;
 
+  const bulanOrderG = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const BULAN_Q_C = {'Januari':'Q1','Februari':'Q1','Maret':'Q1','April':'Q2','Mei':'Q2','Juni':'Q2','Juli':'Q3','Agustus':'Q3','September':'Q3','Oktober':'Q4','November':'Q4','Desember':'Q4'};
+
+  function blnOf(r){
+    let bln=(r[colBulan]||'-').toString().trim()||'-';
+    const dB=parseDate(bln); if(dB){const m=dB.toLocaleDateString('id-ID',{month:'long'}); return m.charAt(0).toUpperCase()+m.slice(1);}
+    return bln;
+  }
+  function expOf(r){ return (r[colKat]||'Tidak diketahui').toString().trim()||'Tidak diketahui'; }
+  function wkOf(r){ const d=parseDate(r[colBulan]); return d?'W'+getWeekNum(d)+' ('+d.getFullYear()+')':null; }
+
+  // populate pills
+  const expSet=new Set(), blnSet=new Set(), wkSet=new Set();
+  costData.forEach(r=>{ expSet.add(expOf(r)); const b=blnOf(r); if(b&&b!=='-')blnSet.add(b); const w=wkOf(r); if(w)wkSet.add(w); });
+  const pE=getPillValue('pillCostExped'), pB=getPillValue('pillCostBulan'), pW=getPillValue('pillCostWeek');
+  fillPills('pillCostExped',[...expSet].sort());
+  fillPills('pillCostBulan',[...blnSet].sort((a,b)=>bulanOrderG.indexOf(a)-bulanOrderG.indexOf(b)));
+  fillPills('pillCostWeek',[...wkSet].sort((a,b)=>{const na=a.match(/W(\d+) \((\d+)\)/),nb=b.match(/W(\d+) \((\d+)\)/); if(na&&nb){if(na[2]!==nb[2])return na[2]-nb[2]; return na[1]-nb[1];} return 0;}));
+  [['pillCostExped',pE,expSet],['pillCostBulan',pB,blnSet],['pillCostWeek',pW,wkSet]].forEach(([cid,prev,set])=>{
+    if(prev&&set.has(prev)) document.getElementById(cid).querySelectorAll('.pill').forEach(p=>p.classList.toggle('active',p.dataset.value===prev));
+  });
+  ['pillCostExped','pillCostBulan','pillCostWeek','pillCostQuartal'].forEach(id=>document.getElementById(id).style.display='');
+
+  const fE=getPillValue('pillCostExped'), fB=getPillValue('pillCostBulan'), fW=getPillValue('pillCostWeek'), fQ=getPillValue('pillCostQuartal');
+  const allCost = costData;
+  costDataF = allCost.filter(r=>{
+    if(fE && expOf(r)!==fE) return false;
+    if(fB && blnOf(r)!==fB) return false;
+    if(fW && wkOf(r)!==fW) return false;
+    if(fQ && BULAN_Q_C[blnOf(r)]!==fQ) return false;
+    return true;
+  });
+
   let totalCost = 0, totalM3 = 0;
   const byKat = {}, byBulan = {};
-  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const bulanOrder = bulanOrderG;
 
-  costData.forEach(r=>{
+  costDataF.forEach(r=>{
     const cost = toNumber(r[colActual]);
     const m3 = toNumber(r[colM3]);
     totalCost += cost; totalM3 += m3;
@@ -2301,7 +2357,7 @@ function renderCost(){
   if(colVehicle && colM3){
     const TARGET = { 'kontener': { rpM3: 339336, pct: 4.35 }, 'truck': { rpM3: 154299, pct: 2.32 } };
     const vehMap = {};
-    costData.forEach(r=>{
+    costDataF.forEach(r=>{
       const veh = (r[colVehicle]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
       if(!vehMap[veh]) vehMap[veh] = {m3:0, cost:0};
       vehMap[veh].m3 += toNumber(r[colM3]);
@@ -2326,7 +2382,7 @@ function renderCost(){
   }
 
   document.getElementById('costHead').innerHTML = costFields.map(f=>`<th>${f}</th>`).join('');
-  document.getElementById('costBody').innerHTML = costData.slice(0,1000).map(r=>'<tr>'+costFields.map(f=>`<td>${r[f]||'-'}</td>`).join('')+'</tr>').join('');
+  document.getElementById('costBody').innerHTML = costDataF.slice(0,1000).map(r=>'<tr>'+costFields.map(f=>`<td>${r[f]||'-'}</td>`).join('')+'</tr>').join('');
 
   // ===== Rate Rp/M³ per Bulan / Ekspedisi / Week, dipisah Darat vs Laut =====
   const TARGET_DARAT = 154299, TARGET_LAUT = 339336;
@@ -2340,7 +2396,7 @@ function renderCost(){
   const rb = {}; // bln -> {Darat:{cost,m3}, Laut:{cost,m3}}
   const re_ = {}; // exped
   const rw = {}; // week
-  costData.forEach(r=>{
+  costDataF.forEach(r=>{
     const cost=toNumber(r[colActual]), m3=toNumber(r[colM3]);
     const j=jenisOf(r);
     let bln=(r[colBulan]||'-').toString().trim()||'-';
@@ -2723,6 +2779,14 @@ document.getElementById('pillPemQuartal').querySelectorAll('.pill').forEach(p=>{
     document.getElementById('pillPemQuartal').querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
     p.classList.add('active');
     if(pemHitData.length) renderPemenuhan();
+  });
+});
+
+document.getElementById('pillCostQuartal').querySelectorAll('.pill').forEach(p=>{
+  p.addEventListener('click', ()=>{
+    document.getElementById('pillCostQuartal').querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    if(costData.length) renderCost();
   });
 });
 </script>
