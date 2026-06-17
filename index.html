@@ -838,56 +838,41 @@
       </div>
     </div>
 
-    <div class="grid2">
-      <div class="card" id="costRatioCard" style="display:none;">
-        <h2>Cost Ratio per M3 vs Target</h2>
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Jenis Armada</th>
-                <th>Total M3</th>
-                <th>Actual Cost</th>
-                <th>Actual Rp/M3</th>
-                <th>Target Rp/M3</th>
-                <th>Selisih Rp/M3</th>
-                <th>Actual % thd Total</th>
-                <th>Target %</th>
-              </tr>
-            </thead>
-            <tbody id="costRatioBody"></tbody>
-          </table>
-        </div>
+    <div class="card" id="costRatioCard" style="display:none;">
+      <h2>Cost Ratio per M3 vs Target (Darat Rp154.299 · Laut Rp339.336)</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Jenis Armada</th>
+              <th>Total M3</th>
+              <th>Actual Cost</th>
+              <th>Actual Rp/M3</th>
+              <th>Target Rp/M3</th>
+              <th>Selisih Rp/M3</th>
+              <th>Actual % thd Total</th>
+              <th>Target %</th>
+            </tr>
+          </thead>
+          <tbody id="costRatioBody"></tbody>
+        </table>
       </div>
+    </div>
 
+    <div class="grid2" id="costRatioBreakdown" style="display:none;">
       <div class="card">
-        <h2>Monitoring ETA Kontainer (Sheet Terpisah)</h2>
-        <div class="sourcebar" style="padding:0;border:none;margin-bottom:14px;">
-          <input type="text" id="sheetUrl2" placeholder="Tempel link CSV publish 'Monitoring ETA Kontainer'..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSr5a-IuvbhOjfsbATYVtgSyQ5YVRGYK2nYgNC7yxhQwHnnsUbndjYVZ0HsQ00qcu8K-HEVVq_SLAyh/pub?gid=1331290254&single=true&output=csv">
-          <input type="text" id="skipRows2" placeholder="Skip baris" value="0" style="max-width:90px;flex:none;">
-          <button onclick="loadData2()">Muat Data</button>
-          <span class="status" id="lastSync2">Belum dimuat</span>
-        </div>
-        <div class="filters" id="eta2Filters" style="display:none;">
-          <select id="filterEta2Col"></select>
-          <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">dari
-            <input type="date" id="filterEta2From">
-          </label>
-          <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">s.d.
-            <input type="date" id="filterEta2To">
-          </label>
-        </div>
-        <div class="mapping-bar" id="eta2StatusMapping" style="display:none;">
-          <label>Kolom ETA <select id="eta2ColEta"></select></label>
-          <label>Kolom Aktual Sandar <select id="eta2ColAktual"></select></label>
-        </div>
-        <div class="table-scroll" id="eta2TableWrap" style="display:none;max-height:480px;">
-          <table>
-            <thead><tr id="eta2Head"></tr></thead>
-            <tbody id="eta2Body"></tbody>
-          </table>
-        </div>
+        <h2>Rate Rp/M³ per Bulan (Darat vs Laut vs Target)</h2>
+        <div class="chart-wrap"><canvas id="chartRatioBulan"></canvas></div>
       </div>
+      <div class="card">
+        <h2>Rate Rp/M³ per Ekspedisi</h2>
+        <div class="chart-wrap"><canvas id="chartRatioExped"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" id="costRatioWeekCard" style="display:none;">
+      <h2>Rate Rp/M³ per Week (Darat vs Laut vs Target)</h2>
+      <div class="chart-wrap"><canvas id="chartRatioWeek"></canvas></div>
     </div>
 
     <div class="card" id="costTableCard" style="display:none;">
@@ -896,6 +881,35 @@
         <table>
           <thead><tr id="costHead"></tr></thead>
           <tbody id="costBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Monitoring ETA Kontainer (Sheet Terpisah)</h2>
+      <div class="sourcebar" style="padding:0;border:none;margin-bottom:14px;">
+        <input type="text" id="sheetUrl2" placeholder="Tempel link CSV publish 'Monitoring ETA Kontainer'..." value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSr5a-IuvbhOjfsbATYVtgSyQ5YVRGYK2nYgNC7yxhQwHnnsUbndjYVZ0HsQ00qcu8K-HEVVq_SLAyh/pub?gid=1331290254&single=true&output=csv">
+        <input type="text" id="skipRows2" placeholder="Skip baris" value="0" style="max-width:90px;flex:none;">
+        <button onclick="loadData2()">Muat Data</button>
+        <span class="status" id="lastSync2">Belum dimuat</span>
+      </div>
+      <div class="filters" id="eta2Filters" style="display:none;">
+        <select id="filterEta2Col"></select>
+        <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">dari
+          <input type="date" id="filterEta2From">
+        </label>
+        <label style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;">s.d.
+          <input type="date" id="filterEta2To">
+        </label>
+      </div>
+      <div class="mapping-bar" id="eta2StatusMapping" style="display:none;">
+        <label>Kolom ETA <select id="eta2ColEta"></select></label>
+        <label>Kolom Aktual Sandar <select id="eta2ColAktual"></select></label>
+      </div>
+      <div class="table-scroll" id="eta2TableWrap" style="display:none;max-height:480px;">
+        <table>
+          <thead><tr id="eta2Head"></tr></thead>
+          <tbody id="eta2Body"></tbody>
         </table>
       </div>
     </div>
@@ -2313,6 +2327,63 @@ function renderCost(){
 
   document.getElementById('costHead').innerHTML = costFields.map(f=>`<th>${f}</th>`).join('');
   document.getElementById('costBody').innerHTML = costData.slice(0,1000).map(r=>'<tr>'+costFields.map(f=>`<td>${r[f]||'-'}</td>`).join('')+'</tr>').join('');
+
+  // ===== Rate Rp/M³ per Bulan / Ekspedisi / Week, dipisah Darat vs Laut =====
+  const TARGET_DARAT = 154299, TARGET_LAUT = 339336;
+  function jenisOf(r){
+    const v = (r[colVehicle]||'').toString().toLowerCase();
+    if(v.includes('konten')||v.includes('kontain')||v.includes('container')||v.includes('laut')) return 'Laut';
+    return 'Darat';
+  }
+
+  // per bulan
+  const rb = {}; // bln -> {Darat:{cost,m3}, Laut:{cost,m3}}
+  const re_ = {}; // exped
+  const rw = {}; // week
+  costData.forEach(r=>{
+    const cost=toNumber(r[colActual]), m3=toNumber(r[colM3]);
+    const j=jenisOf(r);
+    let bln=(r[colBulan]||'-').toString().trim()||'-';
+    const dB=parseDate(bln); if(dB){const m=dB.toLocaleDateString('id-ID',{month:'long'}); bln=m.charAt(0).toUpperCase()+m.slice(1);}
+    const exp=(r[colKat]||'Tidak diketahui').toString().trim()||'Tidak diketahui';
+    const d=parseDate(r[colBulan]); const wk=d?'W'+getWeekNum(d)+' ('+d.getFullYear()+')':null;
+    [[rb,bln],[re_,exp]].forEach(([map,key])=>{
+      if(!map[key]) map[key]={Darat:{cost:0,m3:0},Laut:{cost:0,m3:0}};
+      map[key][j].cost+=cost; map[key][j].m3+=m3;
+    });
+    if(wk){ if(!rw[wk]) rw[wk]={Darat:{cost:0,m3:0},Laut:{cost:0,m3:0}}; rw[wk][j].cost+=cost; rw[wk][j].m3+=m3; }
+  });
+
+  const rate=(o)=> o.m3? Math.round(o.cost/o.m3):0;
+
+  function buildRatioChart(canvasId, map, labels, withTarget){
+    destroyChart(canvasId);
+    const ds = [
+      {label:'Darat/Truck', data:labels.map(l=>rate(map[l].Darat)), backgroundColor:'#3d6a8a'},
+      {label:'Laut/Kontener', data:labels.map(l=>rate(map[l].Laut)), backgroundColor:'#e0732a'}
+    ];
+    if(withTarget){
+      ds.push({type:'line', label:'Target Darat', data:labels.map(()=>TARGET_DARAT), borderColor:'#3d6a8a', borderDash:[6,4], pointRadius:0, backgroundColor:'transparent', datalabels:{display:false}});
+      ds.push({type:'line', label:'Target Laut', data:labels.map(()=>TARGET_LAUT), borderColor:'#e0732a', borderDash:[6,4], pointRadius:0, backgroundColor:'transparent', datalabels:{display:false}});
+    }
+    charts[canvasId]=new Chart(document.getElementById(canvasId),{type:'bar',
+      data:{labels,datasets:ds},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom'},datalabels:{color:'#1b2a35',font:{weight:'bold',size:8},formatter:v=>v?Math.round(v).toLocaleString('id-ID'):''}}}
+    });
+  }
+
+  const rbLabels=Object.keys(rb).sort((a,b)=>{const ia=bulanOrder.indexOf(a),ib=bulanOrder.indexOf(b); if(ia===-1&&ib===-1)return a.localeCompare(b); if(ia===-1)return 1; if(ib===-1)return -1; return ia-ib;});
+  buildRatioChart('chartRatioBulan', rb, rbLabels, true);
+
+  const reLabels=Object.keys(re_).sort((a,b)=>(re_[b].Darat.cost+re_[b].Laut.cost)-(re_[a].Darat.cost+re_[a].Laut.cost));
+  buildRatioChart('chartRatioExped', re_, reLabels, false);
+
+  const rwLabels=Object.keys(rw).sort((a,b)=>{const na=a.match(/W(\d+) \((\d+)\)/),nb=b.match(/W(\d+) \((\d+)\)/); if(na&&nb){if(na[2]!==nb[2])return na[2]-nb[2]; return na[1]-nb[1];} return 0;});
+  buildRatioChart('chartRatioWeek', rw, rwLabels, true);
+
+  document.getElementById('costRatioBreakdown').style.display = '';
+  document.getElementById('costRatioWeekCard').style.display = '';
 }
 
 /* ===================== PEMENUHAN ARMADA (HIT kolom AA + MISS sheet) ===================== */
