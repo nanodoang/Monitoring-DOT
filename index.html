@@ -797,39 +797,43 @@
         <span class="status" id="costSync">Belum dimuat</span>
       </div>
       <div class="mapping-bar" id="costMapping" style="display:none;">
-        <label>Kolom Bulan <select id="costColBulan"></select></label>
-        <label>Kolom Kategori (Ekspedisi) <select id="costColKategori"></select></label>
-        <label>Kolom Budget Cost <select id="costColBudget"></select></label>
-        <label>Kolom Actual Cost <select id="costColActual"></select></label>
-        <label>Kolom Jenis Armada (Kontener/Truck) <select id="costColVehicle"></select></label>
+        <label>Kolom Bulan/Tanggal <select id="costColBulan"></select></label>
+        <label>Kolom Ekspedisi <select id="costColKategori"></select></label>
+        <label>Kolom Jenis (Kontener/Truck) <select id="costColVehicle"></select></label>
         <label>Kolom Total M3 <select id="costColM3"></select></label>
+        <label>Kolom Total Cost (Price Exp) <select id="costColActual"></select></label>
+        <label>Kolom Rp/M³ (Rate) <select id="costColRate"></select></label>
         <button onclick="renderCost()">Terapkan</button>
       </div>
     </div>
 
     <div class="kpi-row" id="costKpiRow" style="display:none;">
       <div class="kpi">
-        <div class="label">Total Budget</div>
-        <div class="value" id="costKpiBudget">Rp 0</div>
-      </div>
-      <div class="kpi green">
-        <div class="label">Total Actual</div>
+        <div class="label">Total Cost</div>
         <div class="value" id="costKpiActual">Rp 0</div>
       </div>
-      <div class="kpi red" id="costKpiSelisihCard">
-        <div class="label">Selisih (Actual - Budget)</div>
-        <div class="value" id="costKpiSelisih">Rp 0</div>
-        <div class="sub" id="costKpiSelisihPct">0%</div>
+      <div class="kpi">
+        <div class="label">Total M3</div>
+        <div class="value" id="costKpiM3">0</div>
+      </div>
+      <div class="kpi green">
+        <div class="label">Rata² Rate (Rp/M³)</div>
+        <div class="value" id="costKpiRate">Rp 0</div>
+      </div>
+      <div class="kpi" id="costKpiSelisihCard">
+        <div class="label">Rate vs Target</div>
+        <div class="value" id="costKpiSelisih">-</div>
+        <div class="sub" id="costKpiSelisihPct"></div>
       </div>
     </div>
 
     <div class="grid2" id="costCharts" style="display:none;">
       <div class="card">
-        <h2>Budget vs Actual per Kategori</h2>
+        <h2>Rate (Rp/M³) per Ekspedisi</h2>
         <div class="chart-wrap"><canvas id="chartCostCat"></canvas></div>
       </div>
       <div class="card">
-        <h2>Tren Cost per Bulan</h2>
+        <h2>Rate (Rp/M³) per Bulan</h2>
         <div class="chart-wrap"><canvas id="chartCostBulan"></canvas></div>
       </div>
     </div>
@@ -2155,8 +2159,18 @@ function toNumber(v){
   } else if(hasComma){
     // Hanya koma: anggap desimal Indonesia (1,00 -> 1.00)
     s = s.replace(',', '.');
+  } else if(hasDot){
+    // Hanya titik: bisa ribuan (2.450.000) atau desimal (2.45)
+    const parts = s.split('.');
+    // Jika ada >1 titik, ATAU bagian setelah titik tepat 3 digit (dan bukan satu2nya), anggap pemisah ribuan
+    if(parts.length > 2){
+      s = s.replace(/\./g, ''); // 2.450.000 -> 2450000
+    } else if(parts.length === 2 && parts[1].length === 3 && parts[0].length <= 3){
+      // contoh 339.336 -> ribuan (339336), tapi 2.45 -> desimal
+      s = s.replace(/\./g, '');
+    }
+    // selain itu biarkan (mis. 2.45 = desimal)
   }
-  // hanya titik atau tanpa keduanya: biarkan apa adanya
 
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
@@ -2188,11 +2202,11 @@ function loadCost(){
       document.getElementById('costSync').textContent = 'Tersambung — ' + costData.length + ' baris · update ' + new Date().toLocaleTimeString('id-ID');
       document.getElementById('costMapping').style.display = 'flex';
       fillMappingSelect('costColBulan', fields, ['bulan','month','delivery date','date']);
-      fillMappingSelect('costColKategori', fields, ['expedition','ekspedisi','region','vehicle','kategori']);
-      fillMappingSelect('costColBudget', fields, ['target','budget','anggaran','rencana']);
-      fillMappingSelect('costColActual', fields, ['act','actual','aktual','realisasi','price exp','rp/']);
+      fillMappingSelect('costColKategori', fields, ['expedition','ekspedisi','region','kategori']);
       fillMappingSelect('costColVehicle', fields, ['vehicle','jenis','armada','type']);
-      fillMappingSelect('costColM3', fields, ['qty m3','m3','kubik','volume']);
+      fillMappingSelect('costColM3', fields, ['qty m3','qty sj m3','m3','kubik','volume']);
+      fillMappingSelect('costColActual', fields, ['price exp','price','total cost','cost','rp']);
+      fillMappingSelect('costColRate', fields, ['rp/m','rp/m³','rate','rp per']);
       renderCost();
     },
     (msg)=>{ document.getElementById('costSync').textContent = msg; }
@@ -2203,48 +2217,56 @@ function renderCost(){
   if(!costData.length) return;
   const colBulan = document.getElementById('costColBulan').value;
   const colKat = document.getElementById('costColKategori').value;
-  const colBudget = document.getElementById('costColBudget').value;
   const colActual = document.getElementById('costColActual').value;
+  const colM3 = document.getElementById('costColM3').value;
+  const colRate = document.getElementById('costColRate').value;
+  const colVehicle = document.getElementById('costColVehicle').value;
 
-  let totalBudget = 0, totalActual = 0;
+  let totalCost = 0, totalM3 = 0;
   const byKat = {}, byBulan = {};
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
   costData.forEach(r=>{
-    const b = toNumber(r[colBudget]);
-    const a = toNumber(r[colActual]);
-    totalBudget += b; totalActual += a;
+    const cost = toNumber(r[colActual]);
+    const m3 = toNumber(r[colM3]);
+    totalCost += cost; totalM3 += m3;
     let kat = (r[colKat]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
     let bln = (r[colBulan]||'-').toString().trim() || '-';
     const dB = parseDate(bln); if(dB){ const m=dB.toLocaleDateString('id-ID',{month:'long'}); bln=m.charAt(0).toUpperCase()+m.slice(1); }
-    if(!byKat[kat]) byKat[kat] = {budget:0, actual:0};
-    byKat[kat].budget += b; byKat[kat].actual += a;
-    if(!byBulan[bln]) byBulan[bln] = {budget:0, actual:0};
-    byBulan[bln].budget += b; byBulan[bln].actual += a;
+    if(!byKat[kat]) byKat[kat] = {cost:0, m3:0};
+    byKat[kat].cost += cost; byKat[kat].m3 += m3;
+    if(!byBulan[bln]) byBulan[bln] = {cost:0, m3:0};
+    byBulan[bln].cost += cost; byBulan[bln].m3 += m3;
   });
 
-  const selisih = totalActual - totalBudget;
-  const selisihPct = totalBudget ? Math.round(selisih/totalBudget*100) : 0;
-  document.getElementById('costKpiBudget').textContent = fmtRupiah(totalBudget);
-  document.getElementById('costKpiActual').textContent = fmtRupiah(totalActual);
-  document.getElementById('costKpiSelisih').textContent = fmtRupiah(selisih);
-  document.getElementById('costKpiSelisihPct').textContent = (selisih>=0?'+':'') + selisihPct + '% dari target';
-  document.getElementById('costKpiSelisihCard').className = 'kpi ' + (selisih > 0 ? 'red' : 'green');
+  const avgRate = totalM3 ? totalCost/totalM3 : 0;
+  document.getElementById('costKpiActual').textContent = fmtRupiah(totalCost);
+  document.getElementById('costKpiM3').textContent = totalM3.toLocaleString('id-ID',{maximumFractionDigits:1});
+  document.getElementById('costKpiRate').textContent = fmtRupiah(avgRate) + '/M³';
+
+  // Target gabungan tertimbang (Kontener 339.336, Truck 154.299 — pakai rata2 sebagai acuan jika campur)
+  // Tampilkan apakah avg rate di bawah/atas target rata-rata
+  document.getElementById('costKpiSelisih').textContent = fmtRupiah(avgRate) + '/M³';
+  document.getElementById('costKpiSelisihPct').textContent = 'Total ' + totalM3.toLocaleString('id-ID',{maximumFractionDigits:1}) + ' M³';
+  document.getElementById('costKpiSelisihCard').className = 'kpi green';
+
   document.getElementById('costKpiRow').style.display = '';
   document.getElementById('costCharts').style.display = '';
   document.getElementById('costTableCard').style.display = '';
 
-  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  const katLabels = Object.keys(byKat).sort((a,b)=>byKat[b].actual-byKat[a].actual);
+  // chart rate per ekspedisi
+  const katLabels = Object.keys(byKat).sort((a,b)=>(byKat[b].cost/(byKat[b].m3||1))-(byKat[a].cost/(byKat[a].m3||1)));
   destroyChart('costCat');
   charts.costCat = new Chart(document.getElementById('chartCostCat'), {
     type:'bar',
     data:{ labels: katLabels, datasets:[
-      {label:'Target/Budget', data: katLabels.map(k=>byKat[k].budget), backgroundColor:'#3d6a8a'},
-      {label:'Actual', data: katLabels.map(k=>byKat[k].actual), backgroundColor:'#e0732a'}
+      {label:'Rate Rp/M³', data: katLabels.map(k=>byKat[k].m3? Math.round(byKat[k].cost/byKat[k].m3):0), backgroundColor:'#e0732a'}
     ]},
     options:{responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom'}, datalabels:{color:'#1b2a35', font:{weight:'bold',size:9}, formatter:v=> v? Math.round(v).toLocaleString('id-ID') : ''}}}
+      plugins:{legend:{display:false}, datalabels:{color:'#1b2a35', font:{weight:'bold',size:9}, formatter:v=> v? Math.round(v).toLocaleString('id-ID') : ''}}}
   });
 
+  // chart rate per bulan
   const bulanLabels = Object.keys(byBulan).sort((a,b)=>{
     const ia=bulanOrder.indexOf(a), ib=bulanOrder.indexOf(b);
     if(ia===-1&&ib===-1) return a.localeCompare(b);
@@ -2255,43 +2277,40 @@ function renderCost(){
   charts.costBulan = new Chart(document.getElementById('chartCostBulan'), {
     type:'line',
     data:{ labels: bulanLabels, datasets:[
-      {label:'Target/Budget', data: bulanLabels.map(b=>byBulan[b].budget), borderColor:'#3d6a8a', backgroundColor:'#3d6a8a', tension:.3},
-      {label:'Actual', data: bulanLabels.map(b=>byBulan[b].actual), borderColor:'#e0732a', backgroundColor:'#e0732a', tension:.3}
+      {label:'Rate Rp/M³', data: bulanLabels.map(b=>byBulan[b].m3? Math.round(byBulan[b].cost/byBulan[b].m3):0), borderColor:'#e0732a', backgroundColor:'#e0732a', tension:.3}
     ]},
-    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}, datalabels:{display:false}}}
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'},
+      datalabels:{color:'#1b2a35', font:{weight:'bold',size:9}, formatter:v=> v? Math.round(v).toLocaleString('id-ID') : ''}}}
   });
 
-  // Cost Ratio per M3 vs Target
-  const colVehicle = document.getElementById('costColVehicle').value;
-  const colM3 = document.getElementById('costColM3').value;
+  // Cost Ratio per M3 vs Target (Kontener/Truck)
   if(colVehicle && colM3){
     const TARGET = { 'kontener': { rpM3: 339336, pct: 4.35 }, 'truck': { rpM3: 154299, pct: 2.32 } };
     const vehMap = {};
     costData.forEach(r=>{
       const veh = (r[colVehicle]||'Tidak diketahui').toString().trim() || 'Tidak diketahui';
-      if(!vehMap[veh]) vehMap[veh] = {m3:0, actual:0};
+      if(!vehMap[veh]) vehMap[veh] = {m3:0, cost:0};
       vehMap[veh].m3 += toNumber(r[colM3]);
-      vehMap[veh].actual += toNumber(r[colActual]);
+      vehMap[veh].cost += toNumber(r[colActual]);
     });
-    const grandActual = Object.values(vehMap).reduce((s,v)=>s+v.actual,0);
+    const grandCost = Object.values(vehMap).reduce((s,v)=>s+v.cost,0);
     document.getElementById('costRatioBody').innerHTML = Object.keys(vehMap).map(veh=>{
       const v = vehMap[veh];
-      const actualRpM3 = v.m3 ? v.actual / v.m3 : 0;
-      const actualPct = grandActual ? (v.actual/grandActual*100) : 0;
+      const actualRpM3 = v.m3 ? v.cost / v.m3 : 0;
+      const actualPct = grandCost ? (v.cost/grandCost*100) : 0;
       const keyLower = veh.toLowerCase();
       let target = null;
       for(const k in TARGET){ if(keyLower.includes(k) || (k==='kontener'&&(keyLower.includes('kontain')||keyLower.includes('container')))) { target = TARGET[k]; break; } }
       const targetRpM3 = target ? target.rpM3 : 0;
       const selisih = actualRpM3 - targetRpM3;
       const col = target ? (selisih>0 ? 'var(--red)' : 'var(--green)') : 'var(--muted)';
-      return `<tr><td><strong>${veh}</strong></td><td>${v.m3.toLocaleString('id-ID')}</td><td>${fmtRupiah(v.actual)}</td><td>${fmtRupiah(actualRpM3)}</td><td>${target?fmtRupiah(targetRpM3):'-'}</td><td style="color:${col};font-weight:600;">${target?fmtRupiah(selisih):'-'}</td><td>${actualPct.toFixed(2)}%</td><td>${target?target.pct.toFixed(2)+'%':'-'}</td></tr>`;
+      return `<tr><td><strong>${veh}</strong></td><td>${v.m3.toLocaleString('id-ID',{maximumFractionDigits:1})}</td><td>${fmtRupiah(v.cost)}</td><td>${fmtRupiah(actualRpM3)}</td><td>${target?fmtRupiah(targetRpM3):'-'}</td><td style="color:${col};font-weight:600;">${target?fmtRupiah(selisih):'-'}</td><td>${actualPct.toFixed(2)}%</td><td>${target?target.pct.toFixed(2)+'%':'-'}</td></tr>`;
     }).join('');
     document.getElementById('costRatioCard').style.display = '';
   } else {
     document.getElementById('costRatioCard').style.display = 'none';
   }
 
-  // tabel data
   document.getElementById('costHead').innerHTML = costFields.map(f=>`<th>${f}</th>`).join('');
   document.getElementById('costBody').innerHTML = costData.slice(0,1000).map(r=>'<tr>'+costFields.map(f=>`<td>${r[f]||'-'}</td>`).join('')+'</tr>').join('');
 }
